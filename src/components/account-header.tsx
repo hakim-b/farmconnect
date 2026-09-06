@@ -1,4 +1,5 @@
 import { useAuth, useUser } from '@clerk/expo';
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button } from 'heroui-native';
 
@@ -11,10 +12,13 @@ export function AccountHeader({
   title,
   subtitle,
   profile,
+  right,
 }: {
   title: string;
   subtitle?: string;
   profile: Profile | null;
+  /** Replaces the default "Sign out" button (e.g. the customer profile button). */
+  right?: ReactNode;
 }) {
   const { user } = useUser();
   const { signOut } = useAuth();
@@ -24,9 +28,11 @@ export function AccountHeader({
     <View style={styles.wrap}>
       <View style={styles.brandRow}>
         <Wordmark markSize={22} />
-        <Button size="sm" variant="secondary" onPress={() => signOut()}>
-          Sign out
-        </Button>
+        {right ?? (
+          <Button size="sm" variant="secondary" onPress={() => signOut()}>
+            Sign out
+          </Button>
+        )}
       </View>
       <View style={styles.copy}>
         <ThemedText type="subtitle">{title}</ThemedText>

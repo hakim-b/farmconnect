@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AccountHeader } from '@/components/account-header';
 import { AddToCartSheet } from '@/components/add-to-cart-sheet';
+import { CustomerProfileButton } from '@/components/customer-profile-drawer';
 import { FarmCard } from '@/components/farm-card';
 import { ProductCard } from '@/components/product-card';
 import { EmptyState, LoadingScreen, Screen } from '@/components/screen';
@@ -56,7 +57,11 @@ export default function CustomerHomeScreen() {
 
   return (
     <Screen>
-      <AccountHeader title="What's nearby" profile={profile} />
+      <AccountHeader
+        title="What's nearby"
+        profile={profile}
+        right={<CustomerProfileButton />}
+      />
 
       {error ? (
         <ThemedText type="small" style={styles.error}>

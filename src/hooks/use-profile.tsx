@@ -20,6 +20,11 @@ type ProfileValue = {
   error: string | null;
   refresh: () => Promise<void>;
   saveRole: (role: UserRole, displayName?: string) => Promise<Profile>;
+  updateProfile: (patch: {
+    firstName?: string;
+    lastName?: string;
+    avatarUrl?: string | null;
+  }) => Promise<Profile>;
   isSignedIn: boolean;
 };
 
@@ -100,6 +105,40 @@ export function ProfileProvider({ children }: PropsWithChildren) {
     [user, userId],
   );
 
+  const updateProfile = useCallback(
+    async (patch: { firstName?: string; lastName?: string; avatarUrl?: string | null }) => {
+      if (!userId) {
+        throw new Error('Still signing you in — please try again in a moment.');
+      }
+      const first = (patch.firstName ?? profile?.first_name ?? '').trim();
+      const last = (patch.lastName ?? profile?.last_name ?? '').trim();
+
+      const payload: Record<string, unknown> = {};
+      if (patch.firstName !== undefined) payload.first_name = first || null;
+      if (patch.lastName !== undefined) payload.last_name = last || null;
+      if (patch.avatarUrl !== undefined) payload.avatar_url = patch.avatarUrl;
+      if (patch.firstName !== undefined || patch.lastName !== undefined) {
+        payload.display_name =
+          `${first} ${last}`.trim() || profile?.display_name || 'FarmConnect member';
+      }
+
+      const { data, error: saveError } = await authedSupabase
+        .from('profiles')
+        .update(payload)
+        .eq('clerk_user_id', userId)
+        .select()
+        .single();
+      if (saveError) {
+        console.error('[useProfile] updateProfile failed:', saveError);
+        throw toError(saveError);
+      }
+      const row = data as Profile;
+      setProfile(row);
+      return row;
+    },
+    [userId, profile],
+  );
+
   const value = useMemo<ProfileValue>(
     () => ({
       profile,
@@ -107,9 +146,10 @@ export function ProfileProvider({ children }: PropsWithChildren) {
       error,
       refresh,
       saveRole,
+      updateProfile,
       isSignedIn: Boolean(isSignedIn),
     }),
-    [profile, isLoaded, loading, error, refresh, saveRole, isSignedIn],
+    [profile, isLoaded, loading, error, refresh, saveRole, updateProfile, isSignedIn],
   );
 
   return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;
