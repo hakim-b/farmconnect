@@ -32,6 +32,8 @@ export default function RootLayout() {
               <Stack.Screen name="welcome" />
               <Stack.Screen name="role-select" />
               <Stack.Screen name="farm-setup" />
+              <Stack.Screen name="vendor-item" options={{ presentation: 'card' }} />
+              <Stack.Screen name="vendor-slot" options={{ presentation: 'card' }} />
               <Stack.Screen name="(customer)" />
               <Stack.Screen name="(vendor)" />
               <Stack.Screen

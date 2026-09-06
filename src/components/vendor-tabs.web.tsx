@@ -14,13 +14,13 @@ export default function VendorTabs() {
           Vendor
         </ThemedText>
         <TabTrigger name="index" href="/(vendor)" asChild>
-          <TabButton>Dashboard</TabButton>
+          <TabButton>My Farm</TabButton>
         </TabTrigger>
         <TabTrigger name="inventory" href="/(vendor)/inventory" asChild>
-          <TabButton>Inventory</TabButton>
+          <TabButton>Items</TabButton>
         </TabTrigger>
         <TabTrigger name="schedule" href="/(vendor)/schedule" asChild>
-          <TabButton>Schedule</TabButton>
+          <TabButton>Slaughter</TabButton>
         </TabTrigger>
         <TabTrigger name="bookings" href="/(vendor)/bookings" asChild>
           <TabButton>Bookings</TabButton>

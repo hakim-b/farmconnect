@@ -1,342 +1,124 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { Button } from 'heroui-native';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, StyleSheet } from 'react-native';
 
-import { EmptyState, LoadingScreen, Screen } from '@/components/screen';
+import { AccountHeader } from '@/components/account-header';
+import { LoadingScreen, Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { AddButton, BigRow, PillButton } from '@/components/vendor-ui';
 import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import { useVendorFarm } from '@/hooks/use-vendor-farm';
-import type { AvailabilitySlot, SlotType } from '@/lib/types';
+import type { AvailabilitySlot } from '@/lib/types';
 
-const PARSE_TIME = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+const offersSlaughter = (t: string) => t === 'slaughter_only' || t === 'mixed';
 
-function startOfDay(date: Date) {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  return copy;
-}
-
-function formatShortDate(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function combineDateTime(date: Date, time: string) {
-  const [hours, minutes] = time.split(':').map(Number);
-  const value = new Date(date);
-  value.setHours(hours, minutes, 0, 0);
-  return value.toISOString();
-}
-
-function formatSlotTime(value: string) {
-  const date = new Date(value);
-  return date.toLocaleString([], {
-    weekday: 'short',
-    month: 'short',
+function formatDay(iso: string) {
+  return new Date(iso).toLocaleDateString([], {
+    weekday: 'long',
+    month: 'long',
     day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
   });
+}
+function formatRange(startIso: string, endIso: string) {
+  const opts: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
+  return `${new Date(startIso).toLocaleTimeString([], opts)} – ${new Date(endIso).toLocaleTimeString([], opts)}`;
 }
 
 export default function VendorScheduleScreen() {
-  const theme = useTheme();
-  const { farm, loading, supabase } = useVendorFarm();
+  const router = useRouter();
+  const { farm, loading, profile, supabase } = useVendorFarm();
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
-  const [slotType, setSlotType] = useState<SlotType>('slaughter');
-  const [date, setDate] = useState(() => startOfDay(new Date(Date.now() + 86400000)));
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('10:00');
-  const [capacity, setCapacity] = useState('1');
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
-  const dates = useMemo(() => {
-    const today = startOfDay(new Date());
-    return Array.from({ length: 14 }, (_, index) => {
-      const value = new Date(today);
-      value.setDate(value.getDate() + index + 1);
-      return value;
-    });
-  }, []);
+  const farmId = farm?.id;
 
   const load = useCallback(async () => {
-    if (!farm) return;
+    if (!farmId) return;
     const { data } = await supabase
       .from('availability_slots')
       .select('*')
-      .eq('farm_id', farm.id)
+      .eq('farm_id', farmId)
+      .eq('slot_type', 'slaughter')
       .gte('starts_at', new Date().toISOString())
       .order('starts_at');
     setSlots((data as AvailabilitySlot[]) ?? []);
-  }, [farm, supabase]);
+  }, [farmId, supabase]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   if (loading) return <LoadingScreen />;
-  if (!farm) {
+  if (!farm) return null;
+
+  if (!offersSlaughter(farm.farm_type)) {
     return (
       <Screen>
-        <EmptyState title="Create a farm first" body="Your dashboard has the farm profile form." />
+        <AccountHeader title="Slaughter times" profile={profile} />
+        <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
+          Your farm is set to “Produce &amp; meats”, so it doesn&apos;t offer slaughter. If that&apos;s
+          not right, change your farm type from the dashboard.
+        </ThemedText>
       </Screen>
     );
   }
 
-  async function createSlot() {
-    if (!farm) return;
-    setError(null);
-    setMessage(null);
-    if (!PARSE_TIME.test(startTime) || !PARSE_TIME.test(endTime)) {
-      setError('Use 24-hour times like 09:00 and 10:30.');
+  const removeSlot = (slot: AvailabilitySlot) => {
+    const booked = slot.capacity - slot.remaining;
+    if (booked > 0) {
+      Alert.alert(
+        'This time has bookings',
+        `${booked} ${booked === 1 ? 'customer has' : 'customers have'} booked this time. You can't remove it.`,
+      );
       return;
     }
-    const amount = Number(capacity);
-    if (!Number.isFinite(amount) || amount < 1) {
-      setError('Capacity must be at least 1.');
-      return;
-    }
-    const startsAt = combineDateTime(date, startTime);
-    const endsAt = combineDateTime(date, endTime);
-    if (new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
-      setError('The slot must end after it starts.');
-      return;
-    }
-    const { error: saveError } = await supabase.from('availability_slots').insert({
-      farm_id: farm.id,
-      slot_type: slotType,
-      starts_at: startsAt,
-      ends_at: endsAt,
-      capacity: amount,
-      remaining: amount,
-    });
-    if (saveError) {
-      setError(saveError.message);
-      return;
-    }
-    setMessage(`Added a ${slotType} slot.`);
-    await load();
-  }
-
-  async function deleteSlot(slot: AvailabilitySlot) {
-    if (!farm) return;
-    if (slot.remaining < slot.capacity) {
-      setError('This slot has reservations. Raise its capacity instead of deleting it.');
-      return;
-    }
-    const { error: deleteError } = await supabase
-      .from('availability_slots')
-      .delete()
-      .eq('id', slot.id);
-    if (deleteError) {
-      setError(deleteError.message);
-      return;
-    }
-    setMessage('Slot removed.');
-    await load();
-  }
-
-  async function bumpCapacity(slot: AvailabilitySlot) {
-    if (!farm) return;
-    const { error: updateError } = await supabase
-      .from('availability_slots')
-      .update({ capacity: slot.capacity + 1, remaining: slot.remaining + 1 })
-      .eq('id', slot.id);
-    if (updateError) {
-      setError(updateError.message);
-      return;
-    }
-    await load();
-  }
-
-  const inputStyle = [
-    styles.input,
-    { color: theme.text, borderColor: theme.backgroundSelected },
-  ];
+    Alert.alert('Remove this time?', formatDay(slot.starts_at), [
+      { text: 'Keep it', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await supabase.from('availability_slots').delete().eq('id', slot.id);
+          if (error) Alert.alert('Could not remove', error.message);
+          await load();
+        },
+      },
+    ]);
+  };
 
   return (
     <Screen>
-      <ThemedText type="subtitle">Schedule</ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        Open booking windows for slaughter and activities. Customers pick from these when they book,
-        and you manage capacity here.
-      </ThemedText>
+      <AccountHeader
+        title="Slaughter times"
+        subtitle="When customers can book you to slaughter an animal"
+        profile={profile}
+      />
 
-      <ThemedView type="backgroundElement" style={styles.card}>
-        <ThemedText type="smallBold">Add a slot</ThemedText>
-        <View style={styles.row}>
-          {(['slaughter', 'activity'] as const).map((value) => (
-            <Button
-              key={value}
-              size="sm"
-              variant={slotType === value ? 'primary' : 'secondary'}
-              onPress={() => setSlotType(value)}>
-              {value}
-            </Button>
-          ))}
-        </View>
+      <AddButton label="Add a time" onPress={() => router.push('/vendor-slot')} />
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}>
-          {dates.map((value) => {
-            const key = formatShortDate(value);
-            const selected = formatShortDate(date) === key;
-            return (
-              <Pressable key={key} onPress={() => setDate(value)}>
-                <ThemedView
-                  type={selected ? 'backgroundSelected' : 'background'}
-                  style={styles.chip}>
-                  <ThemedText type="smallBold">{value.toLocaleDateString([], { weekday: 'short' })}</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {value.toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                  </ThemedText>
-                </ThemedView>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        <View style={styles.timeRow}>
-          <TextInput
-            value={startTime}
-            onChangeText={setStartTime}
-            placeholder="Start (09:00)"
-            placeholderTextColor={theme.textSecondary}
-            autoCapitalize="none"
-            keyboardType="numbers-and-punctuation"
-            style={[inputStyle, styles.timeInput]}
-          />
-          <TextInput
-            value={endTime}
-            onChangeText={setEndTime}
-            placeholder="End (10:00)"
-            placeholderTextColor={theme.textSecondary}
-            autoCapitalize="none"
-            keyboardType="numbers-and-punctuation"
-            style={[inputStyle, styles.timeInput]}
-          />
-          <TextInput
-            value={capacity}
-            onChangeText={setCapacity}
-            placeholder="Capacity"
-            placeholderTextColor={theme.textSecondary}
-            keyboardType="number-pad"
-            style={[inputStyle, styles.capacityInput]}
-          />
-        </View>
-
-        {error ? (
-          <ThemedText type="small" style={styles.error}>
-            {error}
-          </ThemedText>
-        ) : null}
-        {message ? (
-          <ThemedText type="small" style={styles.message}>
-            {message}
-          </ThemedText>
-        ) : null}
-
-        <Button isDisabled={!PARSE_TIME.test(startTime) || !PARSE_TIME.test(endTime)} onPress={createSlot}>
-          Add slot
-        </Button>
-      </ThemedView>
-
-      <View style={styles.section}>
-        <ThemedText type="smallBold">Upcoming slots</ThemedText>
-        {slots.length === 0 ? (
-          <EmptyState title="No slots yet" body="Add slaughter or activity windows above." />
-        ) : (
-          slots.map((slot) => (
-            <ThemedView key={slot.id} type="backgroundElement" style={styles.card}>
-              <View style={styles.slotHeader}>
-                <View style={styles.copy}>
-                  <ThemedText type="smallBold">{formatSlotTime(slot.starts_at)}</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {slot.slot_type} · {slot.capacity - slot.remaining} of {slot.capacity} reserved
-                  </ThemedText>
-                </View>
-                <View style={styles.row}>
-                  {slot.remaining < slot.capacity ? (
-                    <Button size="sm" variant="secondary" onPress={() => bumpCapacity(slot)}>
-                      +1 capacity
-                    </Button>
-                  ) : null}
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    isDisabled={slot.remaining < slot.capacity}
-                    onPress={() => deleteSlot(slot)}>
-                    Remove
-                  </Button>
-                </View>
-              </View>
-            </ThemedView>
-          ))
-        )}
-      </View>
+      {slots.length === 0 ? (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
+          No times added yet. Tap the green button to set when you&apos;re available — pick a day, a
+          start and end time, and how many animals you can handle.
+        </ThemedText>
+      ) : (
+        slots.map((slot) => {
+          const booked = slot.capacity - slot.remaining;
+          return (
+            <BigRow
+              key={slot.id}
+              title={formatDay(slot.starts_at)}
+              subtitle={`${formatRange(slot.starts_at, slot.ends_at)} · ${booked} of ${slot.capacity} booked`}
+              right={
+                <PillButton label="Remove" tone="danger" onPress={() => removeSlot(slot)} />
+              }
+            />
+          );
+        })
+      )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    padding: Spacing.three,
-    borderRadius: Spacing.three,
-    gap: Spacing.two,
-  },
-  row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-  },
-  chipRow: {
-    gap: Spacing.two,
-    paddingRight: Spacing.two,
-  },
-  chip: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.two,
-    alignItems: 'center',
-    gap: 2,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  timeInput: {
-    flex: 1,
-  },
-  capacityInput: {
-    width: 88,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  section: {
-    gap: Spacing.two,
-  },
-  slotHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-  },
-  copy: {
-    flex: 1,
-    gap: 4,
-  },
-  error: {
-    color: '#B42318',
-  },
-  message: {
-    color: '#2F6B3A',
-  },
+  note: { lineHeight: 22 },
 });
