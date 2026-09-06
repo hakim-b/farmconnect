@@ -1,19 +1,18 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image } from 'expo-image';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Button, Tabs } from 'heroui-native';
 
 import { AddToCartSheet } from '@/components/add-to-cart-sheet';
 import { CertificationRow } from '@/components/farm-card';
 import { ProductCard } from '@/components/product-card';
+import { ReserveSlotSheet, type ReserveTarget } from '@/components/reserve-slot-sheet';
 import { EmptyState, LoadingScreen, Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
-import { useProfile } from '@/hooks/use-profile';
-import { usePublicSupabase, useSupabase } from '@/hooks/use-supabase';
+import { usePublicSupabase } from '@/hooks/use-supabase';
 import {
   FARM_TYPE_LABELS,
   formatPrice,
@@ -26,13 +25,19 @@ import {
   type SlaughterOffering,
 } from '@/lib/types';
 
+function nextTimeLabel(slots: AvailabilitySlot[]): string {
+  const open = slots.filter((s) => s.remaining > 0);
+  if (open.length === 0) return slots.length > 0 ? 'All posted times are full' : 'No times posted yet';
+  const next = open[0];
+  const when = new Date(next.starts_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const spots = open.reduce((sum, s) => sum + s.remaining, 0);
+  return `Next: ${when} · ${spots} ${spots === 1 ? 'spot' : 'spots'} open`;
+}
+
 export default function FarmProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const farmId = Number(id);
-  const theme = useTheme();
-  const { profile } = useProfile();
   const publicClient = usePublicSupabase();
-  const supabase = useSupabase();
   const [tab, setTab] = useState('produce');
   const [farm, setFarm] = useState<Farm | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -41,9 +46,9 @@ export default function FarmProfileScreen() {
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-  const [invitees, setInvitees] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [sheetProduct, setSheetProduct] = useState<Product | null>(null);
+  const [reserveTarget, setReserveTarget] = useState<ReserveTarget | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(farmId)) return;
@@ -73,67 +78,32 @@ export default function FarmProfileScreen() {
     setLoading(false);
   }, [farmId, publicClient]);
 
+  // Refetch whenever the screen regains focus (e.g. coming back from Bookings).
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
+
+  // Live updates: reflect new times / filled spots the moment a farmer changes
+  // them, without the customer leaving the page. Silently inert if the project's
+  // realtime publication doesn't include the table.
   useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function bookSlaughter(offering: SlaughterOffering, slot?: AvailabilitySlot) {
-    if (!profile) {
-      setMessage('Sign in as a customer to book.');
-      return;
-    }
-    const scheduledAt = slot?.starts_at ?? new Date(Date.now() + 86400000).toISOString();
-    const { data, error } = await supabase
-      .from('bookings')
-      .insert({
-        farm_id: farmId,
-        customer_profile_id: profile.id,
-        booking_type: 'slaughter',
-        slaughter_offering_id: offering.id,
-        slot_id: slot?.id ?? null,
-        scheduled_at: scheduledAt,
-        total_price: offering.price,
-        notes: invitees ? `Split with: ${invitees}` : null,
-      })
-      .select()
-      .single();
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-    const emails = invitees
-      .split(',')
-      .map((value) => value.trim())
-      .filter(Boolean);
-    if (emails.length && data) {
-      await supabase.from('booking_invitees').insert(
-        emails.map((email) => ({
-          booking_id: data.id,
-          invitee_email: email,
-        })),
-      );
-    }
-    setInvitees('');
-    setMessage(`Requested ${offering.name}. The farm will confirm the slot.`);
-  }
-
-  async function bookActivity(activity: Activity, slot?: AvailabilitySlot) {
-    if (!profile) {
-      setMessage('Sign in as a customer to book.');
-      return;
-    }
-    const scheduledAt = slot?.starts_at ?? new Date(Date.now() + 86400000).toISOString();
-    const { error } = await supabase.from('bookings').insert({
-      farm_id: farmId,
-      customer_profile_id: profile.id,
-      booking_type: 'activity',
-      activity_id: activity.id,
-      slot_id: slot?.id ?? null,
-      scheduled_at: scheduledAt,
-      total_price: activity.price,
-    });
-    setMessage(error ? error.message : `Requested ${activity.name}.`);
-  }
+    if (!Number.isFinite(farmId)) return;
+    const channel = publicClient
+      .channel(`farm-slots-${farmId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'availability_slots', filter: `farm_id=eq.${farmId}` },
+        () => {
+          void load();
+        },
+      )
+      .subscribe();
+    return () => {
+      void publicClient.removeChannel(channel);
+    };
+  }, [farmId, publicClient, load]);
 
   if (loading) return <LoadingScreen />;
   if (!farm) {
@@ -209,16 +179,8 @@ export default function FarmProfileScreen() {
 
         <Tabs.Content value="slaughter">
           <ThemedText type="small" themeColor="textSecondary" style={styles.help}>
-            Book a whole animal and optionally invite others to split the cost and yield.
+            Book a whole animal and optionally invite others by email to split the cost and yield.
           </ThemedText>
-          <TextInput
-            value={invitees}
-            onChangeText={setInvitees}
-            placeholder="Invitee emails, comma separated"
-            placeholderTextColor={theme.textSecondary}
-            autoCapitalize="none"
-            style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-          />
           {offerings.length === 0 ? (
             <EmptyState title="No slaughter dates" body="This farm is not offering slaughter bookings." />
           ) : (
@@ -240,20 +202,14 @@ export default function FarmProfileScreen() {
                     {offering.yield_notes}
                   </ThemedText>
                 ) : null}
-                {slaughterSlots.slice(0, 3).map((slot) => (
-                  <Button
-                    key={slot.id}
-                    size="sm"
-                    variant="secondary"
-                    onPress={() => bookSlaughter(offering, slot)}>
-                    {new Date(slot.starts_at).toLocaleString()} · {slot.remaining} left
-                  </Button>
-                ))}
-                {slaughterSlots.length === 0 ? (
-                  <Button size="sm" onPress={() => bookSlaughter(offering)}>
-                    Request a time
-                  </Button>
-                ) : null}
+                <ThemedText type="small" themeColor="primary" style={styles.slotHint}>
+                  {nextTimeLabel(slaughterSlots)}
+                </ThemedText>
+                <Button
+                  size="sm"
+                  onPress={() => setReserveTarget({ kind: 'slaughter', offering })}>
+                  {slaughterSlots.some((s) => s.remaining > 0) ? 'Reserve a time' : 'Request a time'}
+                </Button>
               </ThemedView>
             ))
           )}
@@ -273,20 +229,14 @@ export default function FarmProfileScreen() {
                   {activity.price === 0 ? 'Free' : formatPrice(activity.price)}
                   {activity.duration_minutes ? ` · ${activity.duration_minutes} min` : ''}
                 </ThemedText>
-                {activitySlots.slice(0, 3).map((slot) => (
-                  <Button
-                    key={slot.id}
-                    size="sm"
-                    variant="secondary"
-                    onPress={() => bookActivity(activity, slot)}>
-                    {new Date(slot.starts_at).toLocaleString()}
-                  </Button>
-                ))}
-                {activitySlots.length === 0 ? (
-                  <Button size="sm" onPress={() => bookActivity(activity)}>
-                    Request a time
-                  </Button>
-                ) : null}
+                <ThemedText type="small" themeColor="primary" style={styles.slotHint}>
+                  {nextTimeLabel(activitySlots)}
+                </ThemedText>
+                <Button
+                  size="sm"
+                  onPress={() => setReserveTarget({ kind: 'activity', activity })}>
+                  {activitySlots.some((s) => s.remaining > 0) ? 'Reserve a time' : 'Request a time'}
+                </Button>
               </ThemedView>
             ))
           )}
@@ -297,6 +247,28 @@ export default function FarmProfileScreen() {
         key={sheetProduct?.id ?? 'none'}
         product={sheetProduct}
         onClose={() => setSheetProduct(null)}
+      />
+
+      <ReserveSlotSheet
+        key={
+          reserveTarget
+            ? `${reserveTarget.kind}-${
+                reserveTarget.kind === 'slaughter'
+                  ? reserveTarget.offering.id
+                  : reserveTarget.activity.id
+              }`
+            : 'none'
+        }
+        target={reserveTarget}
+        farmId={farmId}
+        farmName={farm.name}
+        slots={slots}
+        onClose={() => setReserveTarget(null)}
+        onReserved={(m) => {
+          setReserveTarget(null);
+          setMessage(m);
+          void load();
+        }}
       />
 
       {reviews.length > 0 ? (
@@ -347,12 +319,8 @@ const styles = StyleSheet.create({
   help: {
     marginTop: Spacing.three,
   },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    marginTop: Spacing.two,
+  slotHint: {
+    marginTop: Spacing.one,
   },
   message: {
     color: '#2F6B3A',

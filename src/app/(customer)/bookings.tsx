@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Button } from 'heroui-native';
 
@@ -9,7 +10,15 @@ import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useProfile } from '@/hooks/use-profile';
 import { useSupabase } from '@/hooks/use-supabase';
-import { formatPrice, type Booking } from '@/lib/types';
+import { formatPrice, type Booking, type BookingStatus } from '@/lib/types';
+
+const STATUS_LABEL: Record<BookingStatus, string> = {
+  pending: 'Waiting for the farm to confirm',
+  accepted: 'Confirmed',
+  declined: 'Declined by the farm',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
 
 export default function CustomerBookingsScreen() {
   const { profile } = useProfile();
@@ -28,9 +37,11 @@ export default function CustomerBookingsScreen() {
     setLoading(false);
   }, [profile, supabase]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   async function cancel(id: number) {
     await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', id);
@@ -56,6 +67,8 @@ export default function CustomerBookingsScreen() {
         bookings.map((booking) => {
           const title =
             booking.slaughter_offerings?.name ?? booking.activities?.name ?? booking.booking_type;
+          const invitees = booking.booking_invitees ?? [];
+          const emails = invitees.map((i) => i.invitee_email).filter(Boolean);
           return (
             <ThemedView key={booking.id} type="backgroundElement" style={styles.card}>
               <ThemedText type="smallBold">{title}</ThemedText>
@@ -63,12 +76,14 @@ export default function CustomerBookingsScreen() {
                 {booking.farms?.name} · {new Date(booking.scheduled_at).toLocaleString()}
               </ThemedText>
               <ThemedText type="small">
-                {booking.status} · {formatPrice(booking.total_price)}
-                {booking.booking_invitees && booking.booking_invitees.length > 0
-                  ? ` · split with ${booking.booking_invitees.length}`
-                  : ''}
+                {STATUS_LABEL[booking.status]} · {formatPrice(booking.total_price)}
               </ThemedText>
-              {booking.status === 'pending' ? (
+              {emails.length > 0 ? (
+                <ThemedText type="small" themeColor="textSecondary">
+                  Splitting with {emails.join(', ')}
+                </ThemedText>
+              ) : null}
+              {booking.status === 'pending' || booking.status === 'accepted' ? (
                 <Button size="sm" variant="secondary" onPress={() => cancel(booking.id)}>
                   Cancel
                 </Button>

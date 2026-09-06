@@ -17,7 +17,7 @@ import type { Booking, BookingStatus } from '@/lib/types';
 type Row = Booking & { customer?: { display_name: string | null } | null };
 
 const SELECT =
-  '*, slaughter_offerings(name, animal_type), activities(name), customer:profiles!customer_profile_id(display_name)';
+  '*, slaughter_offerings(name, animal_type), activities(name), booking_invitees(invitee_email), customer:profiles!customer_profile_id(display_name)';
 
 function clockLabel(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -135,11 +135,20 @@ export default function VendorBookingsScreen() {
             <ThemedText type="small" themeColor="textSecondary">
               {nameFor(b)} · {clockLabel(b.scheduled_at)} · {money(b.total_price)}
             </ThemedText>
-            {b.notes ? (
-              <ThemedText type="small" style={styles.notes}>
-                “{b.notes}”
-              </ThemedText>
-            ) : null}
+            {(() => {
+              const emails = (b.booking_invitees ?? [])
+                .map((i) => i.invitee_email)
+                .filter(Boolean);
+              return emails.length > 0 ? (
+                <ThemedText type="small" themeColor="textSecondary">
+                  Splitting with {emails.join(', ')}
+                </ThemedText>
+              ) : b.notes ? (
+                <ThemedText type="small" style={styles.notes}>
+                  “{b.notes}”
+                </ThemedText>
+              ) : null;
+            })()}
 
             {b.status === 'pending' ? (
               <View style={styles.actions}>
