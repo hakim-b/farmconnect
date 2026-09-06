@@ -1,56 +1,151 @@
-# Welcome to your Expo app 👋
+# FarmConnect
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+FarmConnect is a cross-platform marketplace for discovering local farms, buying produce and meats, booking slaughter appointments, and finding farm activities. It gives customers and farmers one place to manage local farm commerce instead of relying on scattered WhatsApp or social media groups.
 
-## Get started
+## Features
 
-1. Install dependencies
+### Customers
 
-   ```bash
-   npm install
-   ```
+- Browse nearby farms and featured produce or meat listings.
+- View farm profiles with ratings, certifications, products, slaughter offerings, and activities.
+- Browse farms on a map using location-based discovery.
+- Add produce and meat to a cart.
+- Book slaughter appointments and split whole-animal costs with invitees.
+- Register for Eid al-Adha slaughtering and track ticket status.
 
-2. Start the app
+### Farmers and vendors
 
-   ```bash
-   npx expo start
-   ```
+- Create a farm profile and choose a farm type: slaughter only, produce and meats, or mixed.
+- Add produce, meat, whole-animal slaughter offerings, and activities.
+- Add an image from the camera or photo library to an item.
+- Set fixed or weight-based pricing and optionally track inventory.
+- Create availability slots for slaughter and farm activities.
+- Review and manage customer bookings.
+- Manage Eid al-Adha registrations and assign time slots.
 
-In the output, you'll find options to open the app in a
+## Tech stack
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- React Native with Expo SDK 57
+- TypeScript
+- Expo Router for file-based navigation
+- HeroUI Native for native UI components
+- Uniwind and Tailwind CSS utilities
+- Clerk for authentication
+- Supabase PostgreSQL for application data and Row Level Security
+- Supabase Storage for item photos
+- Expo Location and React Native Maps for farm discovery
+- Expo Image Picker and Expo Image for photos
+- React Native Reanimated and Gesture Handler for animation and interaction
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Prerequisites
 
-## Get a fresh project
+- Node.js compatible with Expo SDK 57
+- npm
+- An Expo account
+- Expo Go installed on an iOS or Android device
+- A Clerk application
+- A Supabase project
 
-When you're ready, run:
+Android Studio is not required to run the app on a physical device with Expo Go. It is only needed for a local Android emulator or native Android builds.
+
+## Configuration
+
+Copy the example environment file:
 
 ```bash
-npm run reset-project
+cp .env.example .env.local
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Set these values in `.env.local`:
 
-### Other setup steps
+```env
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key
+CLERK_SECRET_KEY=sk_test_your_clerk_secret_key
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_KEY=your_supabase_publishable_key
+SUPABASE_DB_PASSWORD=your_database_password
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Never commit `.env.local` or expose the Clerk secret key or database password in the client bundle. The `EXPO_PUBLIC_` values are intentionally available to the app.
 
-## Learn more
+### Clerk and Supabase authentication
 
-To learn more about developing your project with Expo, look at the following resources:
+The app uses Clerk session tokens with Supabase. Configure Clerk as a third-party authentication provider in Supabase before testing signed-in database operations:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+1. Activate the Supabase integration in the Clerk Dashboard.
+2. Copy the Clerk domain provided by Clerk.
+3. In Supabase, open **Authentication > Sign In / Providers > Third-Party Auth**.
+4. Add Clerk and paste the Clerk domain.
 
-## Join the community
+## Database and Storage setup
 
-Join our community of developers creating universal apps.
+Apply the migrations to the Supabase project. The Storage migration creates the public `item-photos` bucket and its upload policies:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+node scripts/apply-supabase-sql.mjs \
+  supabase/migrations/20260905180000_farmconnect_schema.sql \
+  supabase/migrations/20260905180100_farmconnect_seed.sql \
+  supabase/migrations/20260905190000_slot_reservation.sql \
+  supabase/migrations/20260905200000_add_availability_slot_updated_at.sql \
+  supabase/migrations/20260905210000_farm_price_tier.sql \
+  supabase/migrations/20260906000000_item_photos.sql
+```
+
+The script requires `SUPABASE_DB_PASSWORD` in `.env.local`. Alternatively, run the SQL files in the Supabase SQL Editor. The item photos migration is safe to run again: it reuses the bucket and recreates the policies.
+
+## Run with Expo Go
+
+Install dependencies and start the development server:
+
+```bash
+npm install
+npx expo start
+```
+
+Then:
+
+1. Open Expo Go on your iOS or Android phone.
+2. Put the phone and development computer on the same Wi-Fi network.
+3. Scan the QR code shown in the Expo terminal or browser dashboard.
+4. Sign in through Clerk and choose a customer or farmer role.
+
+If the phone cannot connect, try starting Expo with tunnel mode:
+
+```bash
+npx expo start --tunnel
+```
+
+After changing `.env.local`, restart Expo and clear its cache if needed:
+
+```bash
+npx expo start -c
+```
+
+## Other run commands
+
+```bash
+npm run web       # Run in a browser
+npm run ios       # Open the iOS simulator
+npm run android   # Open an Android emulator
+npx expo lint     # Run ESLint
+npx tsc --noEmit  # Run TypeScript validation
+```
+
+The iOS simulator requires Xcode. The Android emulator requires Android Studio with the Android SDK, Platform-Tools, and an Android Virtual Device installed.
+
+## Project structure
+
+```text
+src/app/          Expo Router screens and route layouts
+src/components/   Reusable UI components
+src/hooks/        Shared auth, profile, theme, and data hooks
+src/lib/          Supabase, cart, upload, and domain utilities
+supabase/         Database migrations and seed data
+assets/           App icons, splash assets, and images
+```
+
+## Development notes
+
+- Authentication is handled by Clerk; Supabase stores application data and enforces access with RLS.
+- Photos are uploaded to the `item-photos` Supabase Storage bucket before the item record is saved.
+- The app supports iOS, Android, and web, but some native capabilities behave differently in Expo Go and may require a development build.
