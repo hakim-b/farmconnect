@@ -24,6 +24,7 @@ type WizardShellProps = {
   title: string;
   subtitle?: string;
   onBack: () => void;
+  backLabel?: string;
   onNext: () => void;
   nextLabel?: string;
   nextDisabled?: boolean;
@@ -37,6 +38,7 @@ export function WizardShell({
   title,
   subtitle,
   onBack,
+  backLabel = 'Back',
   onNext,
   nextLabel = 'Next',
   nextDisabled = false,
@@ -51,8 +53,10 @@ export function WizardShell({
       <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
         <View style={styles.topBar}>
           <Pressable onPress={onBack} hitSlop={12} style={styles.back}>
-            <SymbolView name="chevron.left" size={22} tintColor={theme.text} />
-            <ThemedText type="smallBold">Back</ThemedText>
+            {backLabel === 'Back' ? (
+              <SymbolView name="chevron.left" size={22} tintColor={theme.text} />
+            ) : null}
+            <ThemedText type="smallBold">{backLabel}</ThemedText>
           </Pressable>
           <ThemedText type="small" themeColor="textSecondary">
             Step {step} of {total}

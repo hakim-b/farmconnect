@@ -64,7 +64,7 @@ const EMPTY: Draft = {
 export default function FarmSetupScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, signOut } = useAuth();
   const { farm, loading, profile, supabase } = useVendorFarm();
 
   const [draft, setDraft] = useState<Draft>(EMPTY);
@@ -88,8 +88,10 @@ export default function FarmSetupScreen() {
   if (profile.role !== 'vendor') return <Redirect href="/(customer)" />;
   if (farm) return <Redirect href="/(vendor)" />;
 
+  // On the first step there's nowhere to go back to (a signed-in vendor with
+  // no farm is always routed here), so "Back" signs out instead.
   const goBack = () => {
-    if (i === 0) router.replace('/role-select');
+    if (i === 0) void signOut();
     else setI((n) => n - 1);
   };
   const goToStep = (key: StepKey) => {
@@ -198,6 +200,7 @@ export default function FarmSetupScreen() {
       title={props.title}
       subtitle={props.subtitle}
       onBack={goBack}
+      backLabel={i === 0 ? 'Sign out' : 'Back'}
       onNext={onNext}
       nextLabel={props.nextLabel}
       nextDisabled={!canAdvance()}
