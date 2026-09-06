@@ -1,5 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
@@ -10,21 +11,37 @@ export const ROLE_OPTIONS: {
   role: UserRole;
   title: string;
   blurb: string;
-  icon: Parameters<typeof SymbolView>[0]['name'];
 }[] = [
   {
     role: 'customer',
     title: "I'm a customer",
     blurb: 'Buy produce and meats, book a slaughter, and find farm activities near me.',
-    icon: 'basket.fill',
   },
   {
     role: 'vendor',
     title: "I'm a farmer",
     blurb: 'List my farm, manage what I sell, and take bookings from customers.',
-    icon: 'leaf.fill',
   },
 ];
+
+function RoleIcon({ role, color }: { role: UserRole; color: string }) {
+  return (
+    <Svg width={30} height={30} viewBox="0 0 30 30" fill="none">
+      {role === 'customer' ? (
+        <>
+          <Path d="M5 10h20l-2 14H7L5 10Z" fill={color} />
+          <Path d="M10 10a5 5 0 0 1 10 0" stroke={color} strokeWidth={2.5} strokeLinecap="round" />
+          <Path d="M11 14v6M15 14v6M19 14v6" stroke="#fff" strokeWidth={1.5} strokeLinecap="round" />
+        </>
+      ) : (
+        <>
+          <Path d="M24 5C14 5 7 10 7 19c0 2 1 4 2 6 2-7 6-12 13-15" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+          <Path d="M8 24c5-1 10-4 14-9" stroke={color} strokeWidth={2.5} strokeLinecap="round" />
+        </>
+      )}
+    </Svg>
+  );
+}
 
 export function RoleOptionCard({
   role,
@@ -56,7 +73,7 @@ export function RoleOptionCard({
         {busy ? (
           <ActivityIndicator color={theme.primary} />
         ) : (
-          <SymbolView name={opt.icon} size={28} tintColor={theme.primary} />
+          <RoleIcon role={role} color={theme.primary} />
         )}
       </View>
       <View style={styles.text}>
