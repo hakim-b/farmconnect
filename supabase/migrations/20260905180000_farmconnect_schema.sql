@@ -124,6 +124,7 @@ create table public.availability_slots (
   ends_at timestamptz not null,
   capacity integer not null default 1,
   remaining integer not null default 1,
+  updated_at timestamptz not null default now(),
   constraint availability_slot_type_check check (slot_type in ('slaughter', 'activity')),
   constraint availability_time_check check (ends_at > starts_at),
   constraint availability_capacity_check check (capacity >= 0 and remaining >= 0)
