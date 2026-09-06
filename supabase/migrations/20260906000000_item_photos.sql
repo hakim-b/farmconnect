@@ -3,7 +3,9 @@
 
 insert into storage.buckets (id, name, public)
 values ('item-photos', 'item-photos', true)
-on conflict (id) do nothing;
+on conflict (id) do update
+set name = excluded.name,
+    public = excluded.public;
 
 -- Anyone can view photos (the customer feed needs them).
 drop policy if exists "item photos public read" on storage.objects;
