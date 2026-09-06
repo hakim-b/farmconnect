@@ -34,6 +34,7 @@ export type Farm = {
   description: string | null;
   farm_type: FarmType;
   thumbnail_url: string | null;
+  photo_urls: string[];
   address_line: string | null;
   city: string | null;
   region: string | null;

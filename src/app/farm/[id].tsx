@@ -1,7 +1,7 @@
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image } from 'expo-image';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Tabs } from 'heroui-native';
 
 import { AddToCartSheet } from '@/components/add-to-cart-sheet';
@@ -117,11 +117,32 @@ export default function FarmProfileScreen() {
   const labels = (farm.farm_certifications ?? []).map((item) => item.label);
   const slaughterSlots = slots.filter((slot) => slot.slot_type === 'slaughter');
   const activitySlots = slots.filter((slot) => slot.slot_type === 'activity');
+  const gallery =
+    farm.photo_urls && farm.photo_urls.length > 0
+      ? farm.photo_urls
+      : farm.thumbnail_url
+        ? [farm.thumbnail_url]
+        : [];
 
   return (
     <Screen>
       <Stack.Screen options={{ title: farm.name }} />
-      <Image source={{ uri: farm.thumbnail_url ?? undefined }} style={styles.hero} contentFit="cover" />
+      {gallery.length > 1 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.galleryRow}>
+          {gallery.map((uri) => (
+            <Image key={uri} source={{ uri }} style={styles.heroPage} contentFit="cover" />
+          ))}
+        </ScrollView>
+      ) : (
+        <Image
+          source={{ uri: gallery[0] ?? undefined }}
+          style={styles.hero}
+          contentFit="cover"
+        />
+      )}
       <ThemedText type="subtitle">{farm.name}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         ★ {formatRating(farm.average_rating)} ({farm.review_count}) · {FARM_TYPE_LABELS[farm.farm_type]}
@@ -318,6 +339,15 @@ export default function FarmProfileScreen() {
 const styles = StyleSheet.create({
   hero: {
     width: '100%',
+    height: 200,
+    borderRadius: Spacing.three,
+    backgroundColor: '#D6D3D1',
+  },
+  galleryRow: {
+    gap: Spacing.two,
+  },
+  heroPage: {
+    width: 300,
     height: 200,
     borderRadius: Spacing.three,
     backgroundColor: '#D6D3D1',

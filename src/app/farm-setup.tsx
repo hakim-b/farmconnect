@@ -5,9 +5,9 @@ import { SymbolView } from 'expo-symbols';
 import { useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
+import { PhotosField } from '@/components/photos-field';
 import { LoadingScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { BigChoice, WizardField, WizardShell, YesNo } from '@/components/wizard';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -15,7 +15,15 @@ import { useVendorFarm } from '@/hooks/use-vendor-farm';
 import { toError } from '@/lib/errors';
 import { FARM_TYPE_LABELS, slugify, type FarmType } from '@/lib/types';
 
-type StepKey = 'name' | 'location' | 'type' | 'about' | 'certified' | 'visibility' | 'review';
+type StepKey =
+  | 'name'
+  | 'location'
+  | 'type'
+  | 'about'
+  | 'photos'
+  | 'certified'
+  | 'visibility'
+  | 'review';
 
 const FARM_TYPES: FarmType[] = ['slaughter_only', 'produce_and_meats', 'mixed'];
 
@@ -43,6 +51,7 @@ type Draft = {
   longitude: number | null;
   farmType: FarmType;
   description: string;
+  photos: string[];
   hasCert: boolean | null;
   certLabel: string;
   visible: boolean | null;
@@ -57,6 +66,7 @@ const EMPTY: Draft = {
   longitude: null,
   farmType: 'mixed',
   description: '',
+  photos: [],
   hasCert: null,
   certLabel: '',
   visible: null,
@@ -77,7 +87,7 @@ export default function FarmSetupScreen() {
     setDraft((d) => ({ ...d, [key]: value }));
 
   const steps = useMemo<StepKey[]>(
-    () => ['name', 'location', 'type', 'about', 'certified', 'visibility', 'review'],
+    () => ['name', 'location', 'type', 'about', 'photos', 'certified', 'visibility', 'review'],
     [],
   );
   const step = steps[Math.min(i, steps.length - 1)];
@@ -155,6 +165,8 @@ export default function FarmSetupScreen() {
           slug: `${slugify(draft.name)}-${profile.id}`,
           description: draft.description.trim() || null,
           farm_type: draft.farmType,
+          thumbnail_url: draft.photos[0] ?? null,
+          photo_urls: draft.photos,
           address_line: draft.address.trim() || null,
           city: draft.city.trim() || null,
           region: draft.region.trim() || null,
@@ -317,6 +329,15 @@ export default function FarmSetupScreen() {
     });
   }
 
+  if (step === 'photos') {
+    return shell({
+      title: 'Add photos of your farm',
+      subtitle: 'Customers see these on your farm page. A field, your animals, the farm stand.',
+      nextLabel: draft.photos.length > 0 ? 'Next' : 'Skip',
+      children: <PhotosField value={draft.photos} onChange={(p) => set('photos', p)} max={5} />,
+    });
+  }
+
   if (step === 'certified') {
     return shell({
       title: 'Do you have a certification?',
@@ -363,6 +384,14 @@ export default function FarmSetupScreen() {
       key: 'about',
       label: 'Description',
       value: draft.description.trim() || 'None yet',
+    },
+    {
+      key: 'photos',
+      label: 'Photos',
+      value:
+        draft.photos.length > 0
+          ? `${draft.photos.length} photo${draft.photos.length === 1 ? '' : 's'}`
+          : 'None yet',
     },
     {
       key: 'certified',
