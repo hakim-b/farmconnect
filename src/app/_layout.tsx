@@ -7,6 +7,7 @@ import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { ProfileProvider } from '@/hooks/use-profile';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
 
@@ -24,29 +25,27 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-        <HeroUINativeProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <AnimatedSplashOverlay />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="welcome" />
-              <Stack.Screen name="role-select" />
-              <Stack.Screen name="farm-setup" />
-              <Stack.Screen name="vendor-item" options={{ presentation: 'card' }} />
-              <Stack.Screen name="vendor-slot" options={{ presentation: 'card' }} />
-              <Stack.Screen name="(customer)" />
-              <Stack.Screen name="(vendor)" />
-              <Stack.Screen
-                name="farm/[id]"
-                options={{
-                  headerShown: true,
-                  title: 'Farm',
-                  headerBackTitle: 'Back',
-                }}
-              />
-            </Stack>
-          </ThemeProvider>
-        </HeroUINativeProvider>
+        <ProfileProvider>
+          <HeroUINativeProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <AnimatedSplashOverlay />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" />
+                <Stack.Screen name="welcome" />
+                <Stack.Screen name="role-select" />
+                <Stack.Screen name="farm-setup" />
+                <Stack.Screen name="vendor-item" options={{ presentation: 'card' }} />
+                <Stack.Screen name="vendor-slot" options={{ presentation: 'card' }} />
+                <Stack.Screen name="(customer)" />
+                <Stack.Screen name="(vendor)" />
+                <Stack.Screen
+                  name="farm/[id]"
+                  options={{ headerShown: true, title: 'Farm', headerBackTitle: 'Back' }}
+                />
+              </Stack>
+            </ThemeProvider>
+          </HeroUINativeProvider>
+        </ProfileProvider>
       </ClerkProvider>
     </GestureHandlerRootView>
   );
