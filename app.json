@@ -40,6 +40,13 @@
         {
           "locationWhenInUsePermission": "FarmConnect uses your location to show nearby farms and place your farm on the map for customers."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FarmConnect uses your photos so you can add pictures of what you sell.",
+          "cameraPermission": "FarmConnect uses your camera so you can take pictures of what you sell."
+        }
       ]
     ],
     "experiments": {

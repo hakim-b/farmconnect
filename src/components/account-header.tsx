@@ -2,6 +2,7 @@ import { useAuth, useUser } from '@clerk/expo';
 import { StyleSheet, View } from 'react-native';
 import { Button } from 'heroui-native';
 
+import { Wordmark } from '@/components/logo';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import type { Profile } from '@/lib/types';
@@ -20,29 +21,34 @@ export function AccountHeader({
   const name = profile?.display_name ?? user?.firstName ?? 'there';
 
   return (
-    <View style={styles.row}>
+    <View style={styles.wrap}>
+      <View style={styles.brandRow}>
+        <Wordmark markSize={24} />
+        <Button size="sm" variant="secondary" onPress={() => signOut()}>
+          Sign out
+        </Button>
+      </View>
       <View style={styles.copy}>
         <ThemedText type="subtitle">{title}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
           {subtitle ?? `Welcome back, ${name}`}
         </ThemedText>
       </View>
-      <Button size="sm" variant="secondary" onPress={() => signOut()}>
-        Sign out
-      </Button>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
+  wrap: {
+    gap: Spacing.three,
+  },
+  brandRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: Spacing.two,
   },
   copy: {
-    flex: 1,
     gap: 4,
   },
 });

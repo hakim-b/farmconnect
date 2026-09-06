@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { type ReactNode } from 'react';
 import {
@@ -11,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from 'heroui-native';
 
+import { FarmConnectMark } from '@/components/logo';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Font, Radius, Spacing } from '@/constants/theme';
@@ -45,11 +47,12 @@ export function FormScreen({
   return (
     <ThemedView style={styles.root}>
       <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, styles.topBarSplit]}>
           <Pressable onPress={onBack} hitSlop={12} style={styles.back}>
             <SymbolView name="chevron.left" size={22} tintColor={theme.text} />
             <ThemedText type="smallBold">{backLabel}</ThemedText>
           </Pressable>
+          <FarmConnectMark size={22} />
         </View>
         <KeyboardAvoidingView
           style={styles.flex}
@@ -259,18 +262,20 @@ export function HourPicker({
 
 export { HOUR_LABELS as formatHour };
 
-/** A large list row: title, subtitle, optional right-side control, tap to open. */
+/** A large list row: optional photo, title, subtitle, optional right control. */
 export function BigRow({
   title,
   subtitle,
   onPress,
   right,
+  image,
   tone = 'default',
 }: {
   title: string;
   subtitle?: string;
   onPress?: () => void;
   right?: ReactNode;
+  image?: string | null;
   tone?: 'default' | 'muted';
 }) {
   const theme = useTheme();
@@ -286,6 +291,15 @@ export function BigRow({
           opacity: tone === 'muted' ? 0.6 : pressed ? 0.9 : 1,
         },
       ]}>
+      {image !== undefined ? (
+        image ? (
+          <Image source={image} style={styles.thumb} contentFit="cover" transition={120} />
+        ) : (
+          <View style={[styles.thumb, styles.thumbEmpty, { backgroundColor: theme.backgroundSelected }]}>
+            <SymbolView name="photo" size={18} tintColor={theme.textSecondary} />
+          </View>
+        )
+      ) : null}
       <View style={{ flex: 1, gap: 2 }}>
         <ThemedText type="heading">{title}</ThemedText>
         {subtitle ? (
@@ -388,6 +402,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
   },
+  topBarSplit: { justifyContent: 'space-between' },
   back: { flexDirection: 'row', alignItems: 'center', gap: Spacing.half },
   content: { padding: Spacing.four, paddingTop: Spacing.three },
   title: { fontFamily: Font.bold, fontSize: 28, lineHeight: 34 },
@@ -447,6 +462,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     padding: Spacing.three,
     minHeight: 64,
+  },
+  thumb: {
+    width: 52,
+    height: 52,
+    borderRadius: Radius.sm,
+  },
+  thumbEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addBtn: {
     flexDirection: 'row',

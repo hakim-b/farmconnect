@@ -3,6 +3,7 @@ import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { Wordmark } from '@/components/logo';
 import { RoleOptionCard, ROLE_OPTIONS } from '@/components/role-cards';
 import { LoadingScreen, Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -76,6 +77,7 @@ export default function RoleSelectScreen() {
   return (
     <Screen scroll={false}>
       <View style={styles.hero}>
+        <Wordmark markSize={26} style={styles.brand} />
         <ThemedText type="title">
           {firstName ? `Welcome, ${firstName}` : 'Welcome to FarmConnect'}
         </ThemedText>
@@ -110,6 +112,9 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     paddingTop: Spacing.six,
     marginBottom: Spacing.four,
+  },
+  brand: {
+    marginBottom: Spacing.two,
   },
   lede: {
     fontSize: 16,

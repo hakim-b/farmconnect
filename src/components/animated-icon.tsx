@@ -1,4 +1,6 @@
 import { Image } from 'expo-image';
+
+import { FarmConnectMark } from '@/components/logo';
 import * as SplashScreen from 'expo-splash-screen';
 import { useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
@@ -33,7 +35,7 @@ export function AnimatedSplashOverlay() {
     },
   });
 
-  const image = <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />;
+  const image = <FarmConnectMark size={84} color="#F9F6F0" />;
 
   return animate ? (
     <Animated.View

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Button } from 'heroui-native';
 
+import { FarmConnectMark } from '@/components/logo';
 import { RoleOptionCard } from '@/components/role-cards';
 import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
@@ -56,6 +57,7 @@ export default function WelcomeScreen() {
   return (
     <Screen scroll={false}>
       <View style={styles.hero}>
+        <FarmConnectMark size={76} />
         <ThemedText type="smallBold" style={styles.kicker}>
           Local farms, one place
         </ThemedText>

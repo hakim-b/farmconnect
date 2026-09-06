@@ -1,33 +1,30 @@
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Alert, StyleSheet } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { AccountHeader } from '@/components/account-header';
+import { FarmCalendar, dateKey, todayString } from '@/components/farm-calendar';
 import { LoadingScreen, Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { AddButton, BigRow, PillButton } from '@/components/vendor-ui';
 import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { useVendorFarm } from '@/hooks/use-vendor-farm';
 import type { AvailabilitySlot } from '@/lib/types';
 
 const offersSlaughter = (t: string) => t === 'slaughter_only' || t === 'mixed';
 
-function formatDay(iso: string) {
-  return new Date(iso).toLocaleDateString([], {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-function formatRange(startIso: string, endIso: string) {
+function timeRange(startIso: string, endIso: string) {
   const opts: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
   return `${new Date(startIso).toLocaleTimeString([], opts)} – ${new Date(endIso).toLocaleTimeString([], opts)}`;
 }
 
 export default function VendorScheduleScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { farm, loading, profile, supabase } = useVendorFarm();
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
+  const [selected, setSelected] = useState(todayString());
 
   const farmId = farm?.id;
 
@@ -43,9 +40,22 @@ export default function VendorScheduleScreen() {
     setSlots((data as AvailabilitySlot[]) ?? []);
   }, [farmId, supabase]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
+
+  const marks = useMemo(() => {
+    const m: Record<string, { color: string }> = {};
+    for (const s of slots) m[dateKey(new Date(s.starts_at))] = { color: theme.primary };
+    return m;
+  }, [slots, theme.primary]);
+
+  const daySlots = useMemo(
+    () => slots.filter((s) => dateKey(new Date(s.starts_at)) === selected),
+    [slots, selected],
+  );
 
   if (loading) return <LoadingScreen />;
   if (!farm) return null;
@@ -71,7 +81,7 @@ export default function VendorScheduleScreen() {
       );
       return;
     }
-    Alert.alert('Remove this time?', formatDay(slot.starts_at), [
+    Alert.alert('Remove this time?', undefined, [
       { text: 'Keep it', style: 'cancel' },
       {
         text: 'Remove',
@@ -85,29 +95,38 @@ export default function VendorScheduleScreen() {
     ]);
   };
 
+  const selectedLabel = new Date(`${selected}T00:00:00`).toLocaleDateString([], {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+
   return (
     <Screen>
       <AccountHeader
         title="Slaughter times"
-        subtitle="When customers can book you to slaughter an animal"
+        subtitle="Tap a day, then add the times you can slaughter"
         profile={profile}
       />
 
-      <AddButton label="Add a time" onPress={() => router.push('/vendor-slot')} />
+      <FarmCalendar selected={selected} onSelect={setSelected} marks={marks} />
 
-      {slots.length === 0 ? (
+      <View style={styles.dayHeader}>
+        <ThemedText type="heading">{selectedLabel}</ThemedText>
+      </View>
+
+      {daySlots.length === 0 ? (
         <ThemedText type="small" themeColor="textSecondary" style={styles.note}>
-          No times added yet. Tap the green button to set when you&apos;re available — pick a day, a
-          start and end time, and how many animals you can handle.
+          Nothing on this day yet.
         </ThemedText>
       ) : (
-        slots.map((slot) => {
+        daySlots.map((slot) => {
           const booked = slot.capacity - slot.remaining;
           return (
             <BigRow
               key={slot.id}
-              title={formatDay(slot.starts_at)}
-              subtitle={`${formatRange(slot.starts_at, slot.ends_at)} · ${booked} of ${slot.capacity} booked`}
+              title={timeRange(slot.starts_at, slot.ends_at)}
+              subtitle={`${booked} of ${slot.capacity} booked`}
               right={
                 <PillButton label="Remove" tone="danger" onPress={() => removeSlot(slot)} />
               }
@@ -115,10 +134,16 @@ export default function VendorScheduleScreen() {
           );
         })
       )}
+
+      <AddButton
+        label={`Add a time on ${new Date(`${selected}T00:00:00`).toLocaleDateString([], { month: 'short', day: 'numeric' })}`}
+        onPress={() => router.push(`/vendor-slot?date=${selected}`)}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   note: { lineHeight: 22 },
+  dayHeader: { marginTop: Spacing.two },
 });

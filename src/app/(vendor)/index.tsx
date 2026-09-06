@@ -1,170 +1,259 @@
-import { Redirect } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { Button } from 'heroui-native';
+import { Redirect, useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { Alert, StyleSheet, TextInput, View } from 'react-native';
 
 import { AccountHeader } from '@/components/account-header';
-import { CertificationRow } from '@/components/farm-card';
-import { EmptyState, LoadingScreen, Screen } from '@/components/screen';
+import { RevenueBars } from '@/components/bar-chart';
+import { LoadingScreen, Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { AddButton, PillButton, TogglePill } from '@/components/vendor-ui';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useVendorFarm } from '@/hooks/use-vendor-farm';
 import { FARM_TYPE_LABELS } from '@/lib/types';
+import { computeFarmStats, money, type StatBooking } from '@/lib/vendor-stats';
 
 export default function VendorDashboardScreen() {
   const theme = useTheme();
   const { farm, loading, refresh, profile, supabase } = useVendorFarm();
-  const [error, setError] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<StatBooking[]>([]);
   const [certLabel, setCertLabel] = useState('');
-  const [certDocumentUrl, setCertDocumentUrl] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const farmId = farm?.id;
+
+  const loadBookings = useCallback(async () => {
+    if (!farmId) return;
+    const { data } = await supabase
+      .from('bookings')
+      .select('status, total_price, scheduled_at')
+      .eq('farm_id', farmId);
+    setBookings((data as StatBooking[]) ?? []);
+  }, [farmId, supabase]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadBookings();
+      void refresh();
+    }, [loadBookings, refresh]),
+  );
+
+  const stats = useMemo(() => computeFarmStats(bookings), [bookings]);
 
   if (loading) return <LoadingScreen />;
   if (!farm) return <Redirect href="/farm-setup" />;
 
-  async function togglePublished() {
-    if (!farm) return;
+  const location = [farm.city, farm.region].filter(Boolean).join(', ') || 'No location set';
+
+  const togglePublished = async () => {
     await supabase.from('farms').update({ is_published: !farm.is_published }).eq('id', farm.id);
     await refresh();
-  }
-
-  async function toggleEid() {
-    if (!farm) return;
+  };
+  const toggleEid = async () => {
     await supabase.from('farms').update({ eid_enabled: !farm.eid_enabled }).eq('id', farm.id);
     await refresh();
-  }
+  };
 
-  async function addCertification() {
-    if (!farm || certLabel.trim().length < 2) return;
+  const addCertification = async () => {
+    const label = certLabel.trim();
+    if (label.length < 2) return;
     setError(null);
-    const { error: insertError } = await supabase.from('farm_certifications').insert({
-      farm_id: farm.id,
-      label: certLabel.trim(),
-      document_url: certDocumentUrl.trim() || null,
-    });
+    const { error: insertError } = await supabase
+      .from('farm_certifications')
+      .insert({ farm_id: farm.id, label });
     if (insertError) {
       setError(insertError.message);
       return;
     }
     setCertLabel('');
-    setCertDocumentUrl('');
     await refresh();
-  }
+  };
 
-  async function removeCertification(certId: number) {
-    if (!farm) return;
-    const { error: deleteError } = await supabase
-      .from('farm_certifications')
-      .delete()
-      .eq('id', certId);
-    if (!deleteError) await refresh();
-    else setError(deleteError.message);
-  }
+  const removeCertification = (id: number, label: string) => {
+    Alert.alert('Remove certification', `Remove "${label}"?`, [
+      { text: 'Keep it', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          const { error: e } = await supabase.from('farm_certifications').delete().eq('id', id);
+          if (e) setError(e.message);
+          else await refresh();
+        },
+      },
+    ]);
+  };
 
-  const location = [farm.city, farm.region].filter(Boolean).join(', ') || 'No location set';
+  const certs = farm.farm_certifications ?? [];
 
   return (
     <Screen>
-      <AccountHeader title="Farm dashboard" profile={profile} />
+      <AccountHeader title="My Farm" profile={profile} />
 
-      <ThemedView type="backgroundElement" style={styles.card}>
-        <ThemedText type="smallBold">{farm.name}</ThemedText>
+      {/* ---- farm summary ---- */}
+      <ThemedView type="surface" style={[styles.card, { borderColor: theme.border }]}>
+        <View style={styles.cardHead}>
+          <ThemedText type="heading" style={{ flex: 1 }}>
+            {farm.name}
+          </ThemedText>
+          <View
+            style={[
+              styles.statusPill,
+              { backgroundColor: farm.is_published ? theme.primary : theme.backgroundSelected },
+            ]}>
+            <ThemedText
+              type="small"
+              style={{ color: farm.is_published ? theme.onPrimary : theme.textSecondary }}>
+              {farm.is_published ? 'Visible to customers' : 'Draft'}
+            </ThemedText>
+          </View>
+        </View>
         <ThemedText type="small" themeColor="textSecondary">
           {FARM_TYPE_LABELS[farm.farm_type]} · {location}
         </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          {farm.is_published ? 'Listed on the marketplace' : 'Hidden from customers'}
-          {farm.eid_enabled ? ' · Eid queue on' : ''}
-        </ThemedText>
-        <CertificationRow labels={(farm.farm_certifications ?? []).map((item) => item.label)} />
         <View style={styles.row}>
-          <Button size="sm" variant="secondary" onPress={togglePublished}>
-            {farm.is_published ? 'Hide from customers' : 'Make visible'}
-          </Button>
-          <Button size="sm" variant="secondary" onPress={toggleEid}>
-            {farm.eid_enabled ? 'Disable Eid' : 'Enable Eid'}
-          </Button>
+          <TogglePill
+            on={farm.is_published}
+            onLabel="Hide from customers"
+            offLabel="Make visible"
+            onToggle={togglePublished}
+          />
+          <PillButton
+            label={farm.eid_enabled ? 'Eid queue: on' : 'Eid queue: off'}
+            onPress={toggleEid}
+          />
         </View>
-
-        <ThemedText type="smallBold">Certifications</ThemedText>
-        <View style={styles.row}>
-          {(farm.farm_certifications ?? []).map((cert) => (
-            <Pressable key={cert.id} onPress={() => removeCertification(cert.id)}>
-              <View style={styles.certChip}>
-                <ThemedText type="small" style={styles.certText}>
-                  {cert.label} ✕
-                </ThemedText>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-        <TextInput
-          value={certLabel}
-          onChangeText={setCertLabel}
-          placeholder="Certification label (e.g. Halal Certified)"
-          placeholderTextColor={theme.textSecondary}
-          style={{ color: theme.text, borderColor: theme.backgroundSelected, ...styles.input }}
-        />
-        <TextInput
-          value={certDocumentUrl}
-          onChangeText={setCertDocumentUrl}
-          placeholder="Document URL (optional)"
-          placeholderTextColor={theme.textSecondary}
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={{ color: theme.text, borderColor: theme.backgroundSelected, ...styles.input }}
-        />
-        <Button
-          isDisabled={certLabel.trim().length < 2}
-          size="sm"
-          variant="secondary"
-          onPress={addCertification}>
-          Add certification
-        </Button>
-        {error ? (
-          <ThemedText type="small" style={styles.error}>
-            {error}
-          </ThemedText>
-        ) : null}
       </ThemedView>
 
-      <EmptyState
-        title="Next: inventory and schedule"
-        body="Add produce, meats, slaughter offerings, and activities from the Inventory tab. Incoming requests show up under Bookings."
+      {/* ---- sales ---- */}
+      <ThemedText type="subtitle" style={styles.sectionTitle}>
+        Sales
+      </ThemedText>
+      <View style={styles.tiles}>
+        <StatTile label="Completed" value={String(stats.completed)} />
+        <StatTile label="Money earned" value={money(stats.revenue)} />
+        <StatTile label="Waiting" value={String(stats.pending)} tone={stats.pending > 0 ? 'alert' : 'default'} />
+      </View>
+
+      <ThemedView type="surface" style={[styles.card, { borderColor: theme.border }]}>
+        <ThemedText type="smallBold">Money earned by week</ThemedText>
+        <RevenueBars data={stats.weekly} />
+      </ThemedView>
+
+      {/* ---- certifications ---- */}
+      <ThemedText type="subtitle" style={styles.sectionTitle}>
+        Certifications
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        Show customers your farm is certified — for example Halal Certified, Organic, or Grass-Fed.
+      </ThemedText>
+
+      {certs.length > 0 ? (
+        <View style={styles.chips}>
+          {certs.map((c) => (
+            <PillButton
+              key={c.id}
+              label={`${c.label}  ✕`}
+              onPress={() => removeCertification(c.id, c.label)}
+            />
+          ))}
+        </View>
+      ) : null}
+
+      <TextInput
+        value={certLabel}
+        onChangeText={setCertLabel}
+        placeholder="Certification name"
+        placeholderTextColor={theme.textSecondary}
+        autoCapitalize="words"
+        style={[styles.input, { color: theme.text, backgroundColor: theme.surface, borderColor: theme.border }]}
       />
+      <AddButton label="Add certification" onPress={addCertification} />
+
+      {error ? (
+        <ThemedText type="small" style={styles.error}>
+          {error}
+        </ThemedText>
+      ) : null}
     </Screen>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  tone = 'default',
+}: {
+  label: string;
+  value: string;
+  tone?: 'default' | 'alert';
+}) {
+  const theme = useTheme();
+  return (
+    <ThemedView type="surface" style={[styles.tile, { borderColor: theme.border }]}>
+      <ThemedText
+        style={[styles.tileValue, { color: tone === 'alert' ? theme.accent : theme.text }]}>
+        {value}
+      </ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        {label}
+      </ThemedText>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    borderWidth: 1,
+    borderRadius: Radius.md,
     padding: Spacing.three,
-    borderRadius: Spacing.three,
     gap: Spacing.two,
   },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+  cardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  statusPill: {
+    borderRadius: Radius.pill,
+    paddingVertical: Spacing.half,
+    paddingHorizontal: Spacing.two,
   },
   row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
   },
-  certChip: {
-    backgroundColor: '#E4F0E6',
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 6,
-    borderRadius: 999,
+  sectionTitle: { marginTop: Spacing.three },
+  tiles: {
+    flexDirection: 'row',
+    gap: Spacing.two,
   },
-  certText: {
-    color: '#2F6B3A',
-    fontSize: 12,
+  tile: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    padding: Spacing.three,
+    gap: Spacing.half,
+    alignItems: 'flex-start',
   },
-  error: {
-    color: '#B42318',
+  tileValue: {
+    fontSize: 24,
+    fontWeight: '700',
   },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.two,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+    fontSize: 16,
+    minHeight: 52,
+  },
+  error: { color: '#B42318' },
 });

@@ -6,6 +6,7 @@ import { Animated, Easing, FlatList, PanResponder, Pressable, ScrollView, StyleS
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Map, MapMarker, MarkerContent, MarkerTooltip, type MapHandle, type MapRegion } from '@/components/ui/mapcn-marker-tooltip';
+import { Wordmark } from '@/components/logo';
 import { LoadingScreen } from '@/components/screen';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { usePublicSupabase } from '@/hooks/use-supabase';
@@ -145,6 +146,11 @@ export default function MapScreen() {
   if (loading) return <LoadingScreen />;
 
   return <View style={styles.root}>
+    <SafeAreaView pointerEvents="box-none" style={styles.brandBadgeWrap} edges={['top']}>
+      <View style={styles.brandBadge}>
+        <Wordmark markSize={20} />
+      </View>
+    </SafeAreaView>
     <Map ref={mapRef} initialRegion={regionFor(userLocation.latitude, userLocation.longitude)} onPress={() => setSelectedFarmId(null)}>
       <UserLocationMarker coordinate={userLocation} />
       {visibleFarms.map((farm) => {
@@ -251,6 +257,8 @@ function NearbySheet({ farms, selectedFarmId, onSelect, onHeightChange }: { farm
 
 const styles = StyleSheet.create({
   root: { flex: 1, width: '100%', height: '100%', position: 'relative', alignSelf: 'stretch', backgroundColor: Colors.light.background },
+  brandBadgeWrap: { position: 'absolute', top: 0, left: 0, zIndex: 10, padding: Spacing.three },
+  brandBadge: { backgroundColor: 'rgba(249,246,240,0.92)', borderRadius: Radius.pill, paddingVertical: 6, paddingHorizontal: 12, alignSelf: 'flex-start' },
   filterOverlay: { position: 'absolute', top: 0, left: 0, right: 0 },
   filterScroll: { flexGrow: 0, flexShrink: 0, alignSelf: 'stretch' }, filterBar: { flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingVertical: 10 },
   filterChip: { flexShrink: 0, flexGrow: 0, alignSelf: 'center', backgroundColor: 'rgba(255,255,255,0.96)', borderRadius: Radius.pill, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: Colors.light.border, shadowColor: '#2E2A26', shadowOpacity: 0.1, shadowRadius: 6, elevation: 2 }, filterChipActive: { backgroundColor: Colors.light.primary, borderColor: Colors.light.primary }, filterChipText: { fontSize: 13, fontWeight: '700', color: Colors.light.text }, filterChipTextActive: { color: Colors.light.onPrimary },

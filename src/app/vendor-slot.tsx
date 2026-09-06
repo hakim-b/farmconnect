@@ -1,40 +1,29 @@
-import { Redirect, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Alert, View } from 'react-native';
 
 import { LoadingScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import {
-  DayPicker,
-  Field,
-  FormScreen,
-  HourPicker,
-  Stepper,
-  formatHour,
-} from '@/components/vendor-ui';
+import { Field, FormScreen, HourPicker, Stepper, formatHour } from '@/components/vendor-ui';
 import { Spacing } from '@/constants/theme';
 import { useVendorFarm } from '@/hooks/use-vendor-farm';
 
-function startOfDay(d: Date) {
-  const c = new Date(d);
-  c.setHours(0, 0, 0, 0);
-  return c;
+function parseDate(key: string | undefined): Date {
+  if (key && /^\d{4}-\d{2}-\d{2}$/.test(key)) {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  const t = new Date();
+  t.setDate(t.getDate() + 1);
+  return t;
 }
 
 export default function VendorSlotScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ date?: string }>();
   const { farm, loading, supabase } = useVendorFarm();
 
-  const days = useMemo(() => {
-    const base = startOfDay(new Date());
-    return Array.from({ length: 30 }, (_, i) => {
-      const d = new Date(base);
-      d.setDate(d.getDate() + i);
-      return d;
-    });
-  }, []);
-
-  const [day, setDay] = useState<Date>(days[1]); // tomorrow
+  const day = parseDate(params.date);
   const [startHour, setStartHour] = useState<number | null>(9);
   const [endHour, setEndHour] = useState<number | null>(12);
   const [count, setCount] = useState(3);
@@ -70,25 +59,21 @@ export default function VendorSlotScreen() {
     }
   };
 
-  const summary = valid
-    ? `${day.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}, ${formatHour(
-        startHour!,
-      )} to ${formatHour(endHour!)} — ${count} ${count === 1 ? 'animal' : 'animals'}`
-    : 'Pick a start and end time';
+  const dayLabel = day.toLocaleDateString([], {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
 
   return (
     <FormScreen
-      title="Add a slaughter time"
-      subtitle="Customers will book from the times you add here."
+      title={`Add a time on ${dayLabel}`}
+      subtitle="Customers will book from the times you add."
       onBack={() => router.back()}
       onSave={save}
       saveLabel="Add this time"
       saveDisabled={!valid}
       saving={saving}>
-      <Field label="Which day?">
-        <DayPicker days={days} value={day.toISOString().slice(0, 10)} onChange={setDay} />
-      </Field>
-
       <Field label="Starts at">
         <HourPicker value={startHour} onChange={setStartHour} />
       </Field>
@@ -103,7 +88,11 @@ export default function VendorSlotScreen() {
 
       <View style={{ paddingTop: Spacing.one }}>
         <ThemedText type="small" themeColor={valid ? 'primary' : 'textSecondary'}>
-          {summary}
+          {valid
+            ? `${dayLabel}, ${formatHour(startHour!)} to ${formatHour(endHour!)} — ${count} ${
+                count === 1 ? 'animal' : 'animals'
+              }`
+            : 'Pick a start and end time'}
         </ThemedText>
       </View>
     </FormScreen>
