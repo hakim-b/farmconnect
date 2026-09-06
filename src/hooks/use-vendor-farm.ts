@@ -10,8 +10,10 @@ export function useVendorFarm() {
   const [farm, setFarm] = useState<Farm | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const profileId = profile?.id;
+
   const refresh = useCallback(async () => {
-    if (!profile) {
+    if (!profileId) {
       setFarm(null);
       setLoading(false);
       return;
@@ -19,13 +21,15 @@ export function useVendorFarm() {
     const { data } = await supabase
       .from('farms')
       .select('*, farm_certifications(*)')
-      .eq('owner_profile_id', profile.id)
+      .eq('owner_profile_id', profileId)
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle();
     setFarm((data as Farm | null) ?? null);
     setLoading(false);
-  }, [profile, supabase]);
+    // key on the primitive id, not the profile object (its ref changes on
+    // every useProfile refetch) — otherwise this loops.
+  }, [profileId, supabase]);
 
   useEffect(() => {
     void refresh();

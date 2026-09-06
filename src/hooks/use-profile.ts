@@ -11,9 +11,11 @@ export function useProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const userId = user?.id;
+
   const refresh = useCallback(async () => {
     if (!isLoaded) return;
-    if (!isSignedIn || !user) {
+    if (!isSignedIn || !userId) {
       setProfile(null);
       setLoading(false);
       setError(null);
@@ -24,7 +26,7 @@ export function useProfile() {
     const { data, error: queryError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('clerk_user_id', user.id)
+      .eq('clerk_user_id', userId)
       .maybeSingle();
 
     if (queryError) {
@@ -35,7 +37,9 @@ export function useProfile() {
       setProfile((data as Profile | null) ?? null);
     }
     setLoading(false);
-  }, [isLoaded, isSignedIn, supabase, user]);
+    // `supabase` is a stable singleton; key the rest on primitive ids so this
+    // effect doesn't refire on every Clerk re-render.
+  }, [isLoaded, isSignedIn, supabase, userId]);
 
   useEffect(() => {
     void refresh();
