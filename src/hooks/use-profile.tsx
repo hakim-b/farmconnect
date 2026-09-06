@@ -19,7 +19,7 @@ type ProfileValue = {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  saveRole: (role: UserRole) => Promise<Profile>;
+  saveRole: (role: UserRole, displayName?: string) => Promise<Profile>;
   isSignedIn: boolean;
 };
 
@@ -66,7 +66,7 @@ export function ProfileProvider({ children }: PropsWithChildren) {
   }, [refresh]);
 
   const saveRole = useCallback(
-    async (role: UserRole) => {
+    async (role: UserRole, displayName?: string) => {
       if (!user || !userId) {
         throw new Error('Still signing you in — please try again in a moment.');
       }
@@ -74,9 +74,10 @@ export function ProfileProvider({ children }: PropsWithChildren) {
         clerk_user_id: userId,
         role,
         display_name:
-          user.fullName ??
-          user.firstName ??
-          user.primaryEmailAddress?.emailAddress ??
+          displayName?.trim() ||
+          user.fullName ||
+          user.firstName ||
+          user.primaryEmailAddress?.emailAddress ||
           'FarmConnect member',
         avatar_url: user.imageUrl ?? null,
       };

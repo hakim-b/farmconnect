@@ -1,14 +1,16 @@
 import { useAuth, useUser } from '@clerk/expo';
 import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Button } from 'heroui-native';
 
 import { Wordmark } from '@/components/logo';
 import { RoleOptionCard, ROLE_OPTIONS } from '@/components/role-cards';
 import { LoadingScreen, Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useProfile } from '@/hooks/use-profile';
+import { useTheme } from '@/hooks/use-theme';
 import { toError } from '@/lib/errors';
 import { clearPendingRole, peekPendingRole } from '@/lib/pending-role';
 import type { UserRole } from '@/lib/types';
@@ -18,18 +20,27 @@ export default function RoleSelectScreen() {
   const { user, isLoaded: userLoaded } = useUser();
   const { profile, loading, saveRole } = useProfile();
   const router = useRouter();
+  const theme = useTheme();
 
   const [saving, setSaving] = useState<UserRole | null>(null);
   const [error, setError] = useState<string | null>(null);
   // While we check for a role picked on the welcome screen.
   const [checking, setChecking] = useState(true);
+  // When set, we still need a display name before we can finish this role.
+  const [nameFor, setNameFor] = useState<UserRole | null>(null);
+  const [name, setName] = useState('');
   const handled = useRef(false);
 
-  const apply = async (role: UserRole) => {
+  // Clerk hosted sign-up with email + password gives us no name, so customers
+  // enter one here — it becomes their account name everywhere (farmers see it
+  // on bookings and reviews).
+  const clerkName = user?.fullName ?? user?.firstName ?? null;
+
+  const apply = async (role: UserRole, displayName?: string) => {
     setSaving(role);
     setError(null);
     try {
-      await saveRole(role);
+      await saveRole(role, displayName);
       await clearPendingRole();
       router.replace(role === 'vendor' ? '/(vendor)' : '/(customer)');
     } catch (err) {
@@ -37,6 +48,17 @@ export default function RoleSelectScreen() {
       setSaving(null);
       setChecking(false); // fall back to the manual picker
     }
+  };
+
+  // A tapped role card, or a role picked on the welcome screen: customers with
+  // no Clerk name stop to enter one; everyone else proceeds straight through.
+  const choose = (role: UserRole) => {
+    if (role === 'customer' && !clerkName) {
+      setNameFor('customer');
+      setChecking(false);
+      return;
+    }
+    void apply(role);
   };
 
   useEffect(() => {
@@ -58,7 +80,7 @@ export default function RoleSelectScreen() {
     (async () => {
       const pending = await peekPendingRole();
       if (pending) {
-        await apply(pending);
+        choose(pending);
       } else {
         setChecking(false);
       }
@@ -70,6 +92,60 @@ export default function RoleSelectScreen() {
   if (!isSignedIn) return <Redirect href="/welcome" />;
   if (profile && !saving) {
     return <Redirect href={profile.role === 'vendor' ? '/(vendor)' : '/(customer)'} />;
+  }
+
+  if (nameFor) {
+    const trimmed = name.trim();
+    return (
+      <Screen scroll={false}>
+        <View style={styles.hero}>
+          <Wordmark markSize={26} style={styles.brand} />
+          <ThemedText type="title">What&rsquo;s your name?</ThemedText>
+          <ThemedText themeColor="textSecondary" style={styles.lede}>
+            This is how farmers will see you on bookings and reviews.
+          </ThemedText>
+        </View>
+
+        <View style={styles.form}>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Full name"
+            placeholderTextColor={theme.textSecondary}
+            autoFocus
+            autoCapitalize="words"
+            autoComplete="name"
+            returnKeyType="done"
+            onSubmitEditing={() => trimmed && apply(nameFor, trimmed)}
+            style={[
+              styles.input,
+              { color: theme.text, backgroundColor: theme.surface, borderColor: theme.border },
+            ]}
+          />
+          <Button
+            isDisabled={!trimmed || saving !== null}
+            onPress={() => apply(nameFor, trimmed)}>
+            {saving ? 'Setting up…' : 'Continue'}
+          </Button>
+          <Pressable
+            onPress={() => {
+              setNameFor(null);
+              setName('');
+            }}
+            disabled={saving !== null}
+            hitSlop={8}
+            style={styles.change}>
+            <ThemedText type="linkPrimary">Choose a different role</ThemedText>
+          </Pressable>
+        </View>
+
+        {error ? (
+          <ThemedText type="small" style={styles.error}>
+            {error}
+          </ThemedText>
+        ) : null}
+      </Screen>
+    );
   }
 
   const firstName = user?.firstName;
@@ -91,7 +167,7 @@ export default function RoleSelectScreen() {
           <RoleOptionCard
             key={opt.role}
             role={opt.role}
-            onPress={apply}
+            onPress={choose}
             busy={saving === opt.role}
             disabled={saving !== null}
           />
@@ -122,6 +198,20 @@ const styles = StyleSheet.create({
   },
   cards: {
     gap: Spacing.three,
+  },
+  form: {
+    gap: Spacing.three,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.three,
+    fontSize: 17,
+    minHeight: 52,
+  },
+  change: {
+    alignSelf: 'flex-start',
   },
   error: {
     color: '#B42318',
