@@ -8,6 +8,7 @@ import { LoadingScreen, Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useProfile } from '@/hooks/use-profile';
+import { toError } from '@/lib/errors';
 import { clearPendingRole, peekPendingRole } from '@/lib/pending-role';
 import type { UserRole } from '@/lib/types';
 
@@ -31,11 +32,7 @@ export default function RoleSelectScreen() {
       await clearPendingRole();
       router.replace(role === 'vendor' ? '/(vendor)' : '/(customer)');
     } catch (err) {
-      setError(
-        err instanceof Error && err.message
-          ? err.message
-          : 'Could not save your choice. Check the Supabase and Clerk setup.',
-      );
+      setError(toError(err).message || 'Could not save your choice. Please try again.');
       setSaving(null);
       setChecking(false); // fall back to the manual picker
     }

@@ -43,7 +43,10 @@ export type Farm = {
   review_count: number;
   is_published: boolean;
   eid_enabled: boolean;
+  /** 1 = $, 2 = $$, 3 = $$$. Maintained by a DB trigger from the farm's offerings. */
+  price_tier: number;
   farm_certifications?: FarmCertification[];
+  activities?: Pick<Activity, 'id'>[];
 };
 
 export type Product = {

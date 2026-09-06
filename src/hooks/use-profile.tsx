@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import { authedSupabase } from '@/lib/supabase';
+import { toError } from '@/lib/errors';
 import { clearPendingRole } from '@/lib/pending-role';
 import type { Profile, UserRole } from '@/lib/types';
 
@@ -51,7 +52,8 @@ export function ProfileProvider({ children }: PropsWithChildren) {
       .eq('clerk_user_id', userId)
       .maybeSingle();
     if (queryError) {
-      setError(queryError.message);
+      console.error('[useProfile] load failed:', queryError);
+      setError(toError(queryError).message);
     } else {
       setError(null);
       setProfile((data as Profile | null) ?? null);
@@ -85,7 +87,10 @@ export function ProfileProvider({ children }: PropsWithChildren) {
         .upsert(payload, { onConflict: 'clerk_user_id' })
         .select()
         .single();
-      if (saveError) throw saveError;
+      if (saveError) {
+        console.error('[useProfile] saveRole failed:', saveError);
+        throw toError(saveError);
+      }
       const row = data as Profile;
       setProfile(row);
       void clearPendingRole();

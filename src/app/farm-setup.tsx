@@ -12,6 +12,7 @@ import { BigChoice, WizardField, WizardShell, YesNo } from '@/components/wizard'
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useVendorFarm } from '@/hooks/use-vendor-farm';
+import { toError } from '@/lib/errors';
 import { FARM_TYPE_LABELS, slugify, type FarmType } from '@/lib/types';
 
 type StepKey = 'name' | 'location' | 'type' | 'about' | 'certified' | 'visibility' | 'review';
@@ -174,10 +175,8 @@ export default function FarmSetupScreen() {
       }
       router.replace('/(vendor)');
     } catch (err) {
-      Alert.alert(
-        'Could not save your farm',
-        err instanceof Error ? err.message : 'Please try again.',
-      );
+      console.error('[farm-setup] create farm failed:', err);
+      Alert.alert('Could not save your farm', toError(err).message);
     } finally {
       setSaving(false);
     }

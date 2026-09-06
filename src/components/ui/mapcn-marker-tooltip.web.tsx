@@ -85,6 +85,8 @@ type MapMarkerProps = {
   children: ReactNode;
   coordinate: MapCoordinate;
   onPress?: () => void;
+  /** Accepted for parity with the native marker; the web marker always re-renders. */
+  live?: boolean;
 };
 
 export function MapMarker({ children, coordinate, onPress }: MapMarkerProps) {
@@ -111,7 +113,13 @@ export function MarkerContent({ children }: { children: ReactNode }) {
   return <View>{children}</View>;
 }
 
-export function MarkerTooltip({ children }: { children: ReactNode }) {
+export function MarkerTooltip({
+  children,
+}: {
+  children: ReactNode;
+  /** Accepted for parity with native; on web the card's own Pressable handles taps. */
+  onPress?: () => void;
+}) {
   return <View style={styles.tooltip}>{children}</View>;
 }
 

@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef, type ReactNode } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import MapView, { Callout, Marker, type Region } from 'react-native-maps';
 
@@ -54,11 +54,25 @@ type MapMarkerProps = {
   children: ReactNode;
   coordinate: MapCoordinate;
   onPress?: () => void;
+  /** Keep re-rendering the marker view (e.g. it animates or its selected state changes). */
+  live?: boolean;
 };
 
-export function MapMarker({ children, coordinate, onPress }: MapMarkerProps) {
+export function MapMarker({ children, coordinate, onPress, live = false }: MapMarkerProps) {
+  // react-native-maps repaints a custom marker view every frame while
+  // `tracksViewChanges` is true, which stutters the whole map once several are
+  // on screen. Track during the first paint (and while `live`), then freeze.
+  const [painted, setPainted] = useState(false);
+  useEffect(() => {
+    const timeout = setTimeout(() => setPainted(true), 1200);
+    return () => clearTimeout(timeout);
+  }, []);
+
   return (
-    <Marker coordinate={coordinate} onPress={onPress} tracksViewChanges>
+    <Marker
+      coordinate={coordinate}
+      onPress={onPress}
+      tracksViewChanges={live || !painted}>
       {children}
     </Marker>
   );
@@ -70,9 +84,9 @@ export function MarkerContent({ children }: { children: ReactNode }) {
 }
 
 /** Native callout counterpart to the web floating marker tooltip. */
-export function MarkerTooltip({ children }: { children: ReactNode }) {
+export function MarkerTooltip({ children, onPress }: { children: ReactNode; onPress?: () => void }) {
   return (
-    <Callout tooltip>
+    <Callout tooltip onPress={onPress}>
       <View>{children}</View>
     </Callout>
   );
