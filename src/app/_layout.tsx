@@ -31,6 +31,7 @@ export default function RootLayout() {
               <Stack.Screen name="index" />
               <Stack.Screen name="welcome" />
               <Stack.Screen name="role-select" />
+              <Stack.Screen name="farm-setup" />
               <Stack.Screen name="(customer)" />
               <Stack.Screen name="(vendor)" />
               <Stack.Screen

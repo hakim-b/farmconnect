@@ -34,7 +34,13 @@
         }
       ],
       "expo-secure-store",
-      "@clerk/expo"
+      "@clerk/expo",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "FarmConnect uses your location to place your farm on the map for customers."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
