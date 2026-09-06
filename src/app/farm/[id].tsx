@@ -252,12 +252,12 @@ export default function FarmProfileScreen() {
       <ReserveSlotSheet
         key={
           reserveTarget
-            ? `${reserveTarget.kind}-${
+            ? `reserve-${reserveTarget.kind}-${
                 reserveTarget.kind === 'slaughter'
                   ? reserveTarget.offering.id
                   : reserveTarget.activity.id
               }`
-            : 'none'
+            : 'reserve-none'
         }
         target={reserveTarget}
         farmId={farmId}
