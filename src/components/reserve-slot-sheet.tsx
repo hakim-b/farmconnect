@@ -12,7 +12,7 @@ import { toError } from '@/lib/errors';
 import { formatPrice, type Activity, type AvailabilitySlot, type SlaughterOffering } from '@/lib/types';
 
 export type ReserveTarget =
-  | { kind: 'slaughter'; offering: SlaughterOffering }
+  | { kind: 'slaughter'; offering: SlaughterOffering | null }
   | { kind: 'activity'; activity: Activity };
 
 /** yyyy-mm-dd for a local Date. */
@@ -78,10 +78,15 @@ export function ReserveSlotSheet({
 
   if (!target) return null;
 
-  const name = target.kind === 'slaughter' ? target.offering.name : target.activity.name;
-  const price = target.kind === 'slaughter' ? target.offering.price : target.activity.price;
+  const offering = target.kind === 'slaughter' ? target.offering : null;
+  const name =
+    target.kind === 'slaughter'
+      ? (offering?.name ?? 'Slaughter appointment')
+      : target.activity.name;
+  const price =
+    target.kind === 'slaughter' ? (offering?.price ?? 0) : target.activity.price;
   const maxInvitees =
-    target.kind === 'slaughter' ? Math.max(0, target.offering.max_split_participants - 1) : 0;
+    target.kind === 'slaughter' ? Math.max(0, (offering?.max_split_participants ?? 4) - 1) : 0;
   const perPerson = price / (emails.length + 1);
 
   const byDay = new Map<string, AvailabilitySlot[]>();
@@ -127,7 +132,7 @@ export function ReserveSlotSheet({
         farm_id: farmId,
         customer_profile_id: profile.id,
         booking_type: target.kind,
-        slaughter_offering_id: target.kind === 'slaughter' ? target.offering.id : null,
+        slaughter_offering_id: offering?.id ?? null,
         activity_id: target.kind === 'activity' ? target.activity.id : null,
         slot_id: slot?.id ?? null,
         scheduled_at: scheduledAt,
@@ -173,7 +178,7 @@ export function ReserveSlotSheet({
             {farmName}
           </ThemedText>
           <ThemedText type="smallBold" themeColor="primary">
-            {formatPrice(price)}
+            {price > 0 ? formatPrice(price) : 'Price confirmed with the farm'}
             {maxInvitees > 0 ? ` · split up to ${maxInvitees + 1} ways` : ''}
           </ThemedText>
 
@@ -233,8 +238,8 @@ export function ReserveSlotSheet({
                   Invite people to split (optional)
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  {emails.length + 1} {emails.length === 0 ? 'person' : 'people'} ·{' '}
-                  {formatPrice(perPerson)} each
+                  {emails.length + 1} {emails.length === 0 ? 'person' : 'people'}
+                  {price > 0 ? ` · ${formatPrice(perPerson)} each` : ''}
                 </ThemedText>
 
                 {emails.map((email) => (

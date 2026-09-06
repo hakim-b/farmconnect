@@ -66,7 +66,9 @@ export default function CustomerBookingsScreen() {
       ) : (
         bookings.map((booking) => {
           const title =
-            booking.slaughter_offerings?.name ?? booking.activities?.name ?? booking.booking_type;
+            booking.slaughter_offerings?.name ??
+            booking.activities?.name ??
+            (booking.booking_type === 'slaughter' ? 'Slaughter appointment' : 'Activity');
           const invitees = booking.booking_invitees ?? [];
           const emails = invitees.map((i) => i.invitee_email).filter(Boolean);
           return (

@@ -181,37 +181,57 @@ export default function FarmProfileScreen() {
           <ThemedText type="small" themeColor="textSecondary" style={styles.help}>
             Book a whole animal and optionally invite others by email to split the cost and yield.
           </ThemedText>
-          {offerings.length === 0 ? (
+          {offerings.length === 0 && slaughterSlots.length === 0 ? (
             <EmptyState title="No slaughter dates" body="This farm is not offering slaughter bookings." />
           ) : (
-            offerings.map((offering) => (
-              <ThemedView key={offering.id} type="backgroundElement" style={styles.card}>
-                <ThemedText type="smallBold">{offering.name}</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {offering.description}
-                </ThemedText>
-                <ThemedText type="small">{formatPrice(offering.price)}</ThemedText>
-                {offering.max_split_participants > 1 ? (
+            <>
+              {offerings.map((offering) => (
+                <ThemedView key={offering.id} type="backgroundElement" style={styles.card}>
+                  <ThemedText type="smallBold">{offering.name}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
-                    Split up to {offering.max_split_participants} ways ·{' '}
-                    {formatPrice(offering.price / offering.max_split_participants)} each
+                    {offering.description}
                   </ThemedText>
-                ) : null}
-                {offering.yield_notes ? (
+                  <ThemedText type="small">{formatPrice(offering.price)}</ThemedText>
+                  {offering.max_split_participants > 1 ? (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Split up to {offering.max_split_participants} ways ·{' '}
+                      {formatPrice(offering.price / offering.max_split_participants)} each
+                    </ThemedText>
+                  ) : null}
+                  {offering.yield_notes ? (
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {offering.yield_notes}
+                    </ThemedText>
+                  ) : null}
+                  <ThemedText type="small" themeColor="primary" style={styles.slotHint}>
+                    {nextTimeLabel(slaughterSlots)}
+                  </ThemedText>
+                  <Button
+                    size="sm"
+                    onPress={() => setReserveTarget({ kind: 'slaughter', offering })}>
+                    {slaughterSlots.some((s) => s.remaining > 0) ? 'Reserve a time' : 'Request a time'}
+                  </Button>
+                </ThemedView>
+              ))}
+
+              {offerings.length === 0 && slaughterSlots.length > 0 ? (
+                <ThemedView type="backgroundElement" style={styles.card}>
+                  <ThemedText type="smallBold">Slaughter appointment</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
-                    {offering.yield_notes}
+                    Pick one of the farm&apos;s open times below. They&apos;ll confirm the animal and
+                    price with you.
                   </ThemedText>
-                ) : null}
-                <ThemedText type="small" themeColor="primary" style={styles.slotHint}>
-                  {nextTimeLabel(slaughterSlots)}
-                </ThemedText>
-                <Button
-                  size="sm"
-                  onPress={() => setReserveTarget({ kind: 'slaughter', offering })}>
-                  {slaughterSlots.some((s) => s.remaining > 0) ? 'Reserve a time' : 'Request a time'}
-                </Button>
-              </ThemedView>
-            ))
+                  <ThemedText type="small" themeColor="primary" style={styles.slotHint}>
+                    {nextTimeLabel(slaughterSlots)}
+                  </ThemedText>
+                  <Button
+                    size="sm"
+                    onPress={() => setReserveTarget({ kind: 'slaughter', offering: null })}>
+                    {slaughterSlots.some((s) => s.remaining > 0) ? 'Reserve a time' : 'Request a time'}
+                  </Button>
+                </ThemedView>
+              ) : null}
+            </>
           )}
         </Tabs.Content>
 
@@ -254,7 +274,7 @@ export default function FarmProfileScreen() {
           reserveTarget
             ? `reserve-${reserveTarget.kind}-${
                 reserveTarget.kind === 'slaughter'
-                  ? reserveTarget.offering.id
+                  ? (reserveTarget.offering?.id ?? 'generic')
                   : reserveTarget.activity.id
               }`
             : 'reserve-none'
