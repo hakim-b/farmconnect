@@ -38,7 +38,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "FarmConnect uses your location to place your farm on the map for customers."
+          "locationWhenInUsePermission": "FarmConnect uses your location to show nearby farms and place your farm on the map for customers."
         }
       ]
     ],
