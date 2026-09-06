@@ -16,6 +16,9 @@ export type MapCoordinate = {
   longitude: number;
 };
 
+/** Fraction of the marker view that sits over the coordinate: {x:0.5,y:1} pins the bottom-center. */
+export type MapAnchor = { x: number; y: number };
+
 export type MapRegion = MapCoordinate & {
   latitudeDelta: number;
   longitudeDelta: number;
@@ -87,9 +90,13 @@ type MapMarkerProps = {
   onPress?: () => void;
   /** Accepted for parity with the native marker; the web marker always re-renders. */
   live?: boolean;
+  /** Which point of the marker view sits on the coordinate. Defaults to center. */
+  anchor?: MapAnchor;
+  /** Draw order relative to sibling markers — raise it for the selected one. */
+  zIndex?: number;
 };
 
-export function MapMarker({ children, coordinate, onPress }: MapMarkerProps) {
+export function MapMarker({ children, coordinate, onPress, anchor, zIndex }: MapMarkerProps) {
   const context = useContext(MapContext);
   const position = useMemo(() => {
     if (!context) return { left: '50%' as const, top: '50%' as const };
@@ -99,9 +106,15 @@ export function MapMarker({ children, coordinate, onPress }: MapMarkerProps) {
       top: `${50 - ((coordinate.latitude - region.latitude) / region.latitudeDelta) * 100}%` as const,
     };
   }, [context, coordinate.latitude, coordinate.longitude]);
+  const offset = useMemo<ViewStyle>(() => ({
+    transform: [
+      { translateX: `${-100 * (anchor?.x ?? 0.5)}%` },
+      { translateY: `${-100 * (anchor?.y ?? 0.5)}%` },
+    ] as ViewStyle['transform'],
+  }), [anchor?.x, anchor?.y]);
 
   return (
-    <View pointerEvents="box-none" style={[styles.marker, position]}>
+    <View pointerEvents="box-none" style={[styles.marker, position, offset, zIndex != null && { zIndex }]}>
       <Pressable onPress={onPress} style={styles.markerPressable}>
         {children}
       </Pressable>
@@ -111,16 +124,6 @@ export function MapMarker({ children, coordinate, onPress }: MapMarkerProps) {
 
 export function MarkerContent({ children }: { children: ReactNode }) {
   return <View>{children}</View>;
-}
-
-export function MarkerTooltip({
-  children,
-}: {
-  children: ReactNode;
-  /** Accepted for parity with native; on web the card's own Pressable handles taps. */
-  onPress?: () => void;
-}) {
-  return <View style={styles.tooltip}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -188,15 +191,8 @@ const styles = StyleSheet.create({
   marker: {
     position: 'absolute',
     alignItems: 'center',
-    transform: [{ translateX: '-50%' }, { translateY: '-50%' }],
   },
   markerPressable: {
     alignItems: 'center',
-  },
-  tooltip: {
-    position: 'absolute',
-    bottom: 38,
-    width: 260,
-    alignSelf: 'center',
   },
 });

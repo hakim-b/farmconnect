@@ -1,12 +1,12 @@
 import * as Location from 'expo-location';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, FlatList, PanResponder, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, Path } from 'react-native-svg';
 
-import { Map, MapMarker, MarkerContent, MarkerTooltip, type MapHandle, type MapRegion } from '@/components/ui/mapcn-marker-tooltip';
-import { Wordmark } from '@/components/logo';
+import { Map, MapMarker, MarkerContent, type MapHandle, type MapRegion } from '@/components/ui/mapcn-marker-tooltip';
 import { LoadingScreen } from '@/components/screen';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { usePublicSupabase } from '@/hooks/use-supabase';
@@ -39,12 +39,6 @@ function matchesCategory(farm: Farm, category: Category): boolean {
       return true;
   }
 }
-function priceLabel(tier: number): string {
-  return tier <= 1 ? '$' : tier === 2 ? '$$' : '$$$';
-}
-function tierColor(tier: number): string {
-  return tier <= 1 ? Colors.light.primary : tier === 2 ? Colors.light.ochre : Colors.light.accent;
-}
 function badgesFor(farm: Farm): string[] {
   const certs = farm.farm_certifications ?? [];
   const ordered = [...certs].sort((a, b) => Number(b.is_verified) - Number(a.is_verified));
@@ -56,12 +50,6 @@ function hasBadge(farm: Farm, badge: BadgeFilter): boolean {
 }
 function regionFor(latitude: number, longitude: number): MapRegion {
   return { latitude, longitude, latitudeDelta: 0.13, longitudeDelta: 0.13 };
-}
-function pinEmoji(farm: Farm): string {
-  return farm.farm_type === 'slaughter_only' ? '🥩' : farm.farm_type === 'produce_and_meats' ? '🥦' : '🚜';
-}
-function pinSummary(farm: Farm): string {
-  return `${pinEmoji(farm)} ${priceLabel(farm.price_tier)} · ${categoryFor(farm)}`;
 }
 
 export default function MapScreen() {
@@ -141,23 +129,22 @@ export default function MapScreen() {
   if (loading) return <LoadingScreen />;
 
   return <View style={styles.root}>
-    <SafeAreaView pointerEvents="box-none" style={styles.brandBadgeWrap} edges={['top']}>
-      <View style={styles.brandBadge}>
-        <Wordmark markSize={20} />
-      </View>
-    </SafeAreaView>
     <Map ref={mapRef} initialRegion={regionFor(userLocation.latitude, userLocation.longitude)} onPress={() => setSelectedFarmId(null)}>
       <UserLocationMarker coordinate={userLocation} />
       {visibleFarms.map((farm) => {
         if (farm.latitude == null || farm.longitude == null) return null;
         const selected = selectedFarmId === farm.id;
-        return <MapMarker key={farm.id} live={selected} coordinate={{ latitude: farm.latitude, longitude: farm.longitude }} onPress={() => selectFarm(farm)}>
+        // First tap swaps the pin for an in-place info card; tapping the card opens the farm.
+        return <MapMarker
+          key={farm.id}
+          live={selected}
+          zIndex={selected ? 999 : undefined}
+          anchor={{ x: 0.5, y: 1 }}
+          coordinate={{ latitude: farm.latitude, longitude: farm.longitude }}
+          onPress={() => (selected ? openFarm(farm) : selectFarm(farm))}>
           <MarkerContent>
-            <View style={[styles.pin, { borderColor: tierColor(farm.price_tier) }, selected && styles.pinSelected]}>
-              <Text style={styles.pinEmoji}>{pinEmoji(farm)}</Text>
-            </View>
+            {selected ? <FarmPreview farm={farm} /> : <MapPin />}
           </MarkerContent>
-          {selected ? <MarkerTooltip onPress={() => openFarm(farm)}><FarmPreview farm={farm} onOpen={() => openFarm(farm)} /></MarkerTooltip> : null}
         </MapMarker>;
       })}
     </Map>
@@ -177,6 +164,23 @@ export default function MapScreen() {
 
     <NearbySheet farms={visibleFarms} selectedFarmId={selectedFarmId} onSelect={selectFarm} onHeightChange={setSheetTop} />
   </View>;
+}
+
+/** A plain teardrop map pin (Airbnb-style) — no emoji, tip on the coordinate. */
+function MapPin() {
+  return (
+    <View style={styles.pin}>
+      <Svg width={28} height={36} viewBox="0 0 24 32">
+        <Path
+          d="M12 1C6.2 1 1.5 5.6 1.5 11.3c0 7.8 9 19 9.4 19.5a1.4 1.4 0 0 0 2.2 0c.4-.5 9.4-11.7 9.4-19.5C22.5 5.6 17.8 1 12 1Z"
+          fill={Colors.light.primary}
+          stroke={Colors.light.backgroundElement}
+          strokeWidth={2}
+        />
+        <Circle cx={12} cy={11.3} r={4} fill={Colors.light.backgroundElement} />
+      </Svg>
+    </View>
+  );
 }
 
 function UserLocationMarker({ coordinate }: { coordinate: { latitude: number; longitude: number } }) {
@@ -215,12 +219,24 @@ function FilterChip({ label, active, onPress }: { label: string; active: boolean
   return <Pressable accessibilityRole="button" onPress={onPress} style={[styles.filterChip, active && styles.filterChipActive]}><Text numberOfLines={1} style={[styles.filterChipText, active && styles.filterChipTextActive]}>{label}</Text></Pressable>;
 }
 
-function FarmPreview({ farm, onOpen }: { farm: Farm; onOpen: () => void }) {
+/**
+ * The in-place card that replaces a pin on first tap. It is not pressable
+ * itself — the marker owns the tap, and a second tap opens the farm page.
+ */
+function FarmPreview({ farm }: { farm: Farm }) {
   const labels = badgesFor(farm);
-  return <Pressable accessibilityRole="button" onPress={onOpen} style={styles.previewCard}>
+  const place = [farm.address_line, farm.city, farm.region].filter(Boolean).join(', ');
+  return <View style={styles.previewCard}>
     <Image source={{ uri: farm.thumbnail_url ?? undefined }} contentFit="cover" style={styles.previewImage} />
-    <View style={styles.previewContent}><Text numberOfLines={1} style={styles.previewName}>{farm.name}</Text><Text numberOfLines={1} style={styles.previewMeta}>{[farm.city, farm.region].filter(Boolean).join(', ')} · {FARM_TYPE_LABELS[farm.farm_type]}</Text><Text style={styles.previewRating}>★ {formatRating(farm.average_rating)} · {priceLabel(farm.price_tier)}</Text><View style={styles.badgeRow}>{labels.map((label) => <View key={label} style={styles.badge}><Text numberOfLines={1} style={styles.badgeText}>{label}</Text></View>)}</View><View style={styles.viewProfileButton}><Text style={styles.viewProfileText}>View Profile</Text></View></View>
-  </Pressable>;
+    <View style={styles.previewContent}>
+      <Text numberOfLines={1} style={styles.previewName}>{farm.name}</Text>
+      <Text numberOfLines={1} style={styles.previewMeta}>{FARM_TYPE_LABELS[farm.farm_type]}{place ? ` · ${place}` : ''}</Text>
+      <Text style={styles.previewRating}>★ {formatRating(farm.average_rating)} <Text style={styles.previewCount}>({farm.review_count} review{farm.review_count === 1 ? '' : 's'})</Text></Text>
+      {farm.description ? <Text numberOfLines={2} style={styles.previewDesc}>{farm.description}</Text> : null}
+      {labels.length ? <View style={styles.badgeRow}>{labels.map((label) => <View key={label} style={styles.badge}><Text numberOfLines={1} style={styles.badgeText}>{label}</Text></View>)}</View> : null}
+      <View style={styles.viewProfileButton}><Text style={styles.viewProfileText}>Tap again to open farm →</Text></View>
+    </View>
+  </View>;
 }
 
 function NearbySheet({ farms, selectedFarmId, onSelect, onHeightChange }: { farms: Farm[]; selectedFarmId: number | null; onSelect: (farm: Farm) => void; onHeightChange?: (height: number) => void }) {
@@ -243,20 +259,18 @@ function NearbySheet({ farms, selectedFarmId, onSelect, onHeightChange }: { farm
   return <View style={[styles.sheet, { height: sheetHeight }]}>
     <View {...panResponder.panHandlers} style={styles.sheetHandleArea}><View style={styles.sheetHandle} /></View>
     <View style={styles.sheetHeader}><Text style={styles.sheetTitle}>{farms.length} nearby farms</Text></View>
-    <FlatList data={farms} keyExtractor={(farm) => String(farm.id)} contentContainerStyle={styles.sheetList} showsVerticalScrollIndicator={false} ListEmptyComponent={<Text style={styles.emptyText}>No farms match those filters.</Text>} renderItem={({ item: farm }) => <Pressable accessibilityRole="button" onPress={() => onSelect(farm)} style={[styles.listCard, selectedFarmId === farm.id && styles.listCardSelected]}><Image source={{ uri: farm.thumbnail_url ?? undefined }} contentFit="cover" style={styles.listImage} /><View style={styles.listContent}><Text numberOfLines={1} style={styles.listName}>{farm.name}</Text><Text numberOfLines={1} style={styles.listMeta}>{[farm.city, farm.region].filter(Boolean).join(', ')} · {categoryFor(farm)}</Text><Text style={styles.listRating}>★ {formatRating(farm.average_rating)} · {pinSummary(farm)}</Text></View></Pressable>} />
+    <FlatList data={farms} keyExtractor={(farm) => String(farm.id)} contentContainerStyle={styles.sheetList} showsVerticalScrollIndicator={false} ListEmptyComponent={<Text style={styles.emptyText}>No farms match those filters.</Text>} renderItem={({ item: farm }) => <Pressable accessibilityRole="button" onPress={() => onSelect(farm)} style={[styles.listCard, selectedFarmId === farm.id && styles.listCardSelected]}><Image source={{ uri: farm.thumbnail_url ?? undefined }} contentFit="cover" style={styles.listImage} /><View style={styles.listContent}><Text numberOfLines={1} style={styles.listName}>{farm.name}</Text><Text numberOfLines={1} style={styles.listMeta}>{[farm.city, farm.region].filter(Boolean).join(', ')} · {categoryFor(farm)}</Text><Text style={styles.listRating}>★ {formatRating(farm.average_rating)}</Text></View></Pressable>} />
   </View>;
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, width: '100%', height: '100%', position: 'relative', alignSelf: 'stretch', backgroundColor: Colors.light.background },
-  brandBadgeWrap: { position: 'absolute', top: 0, left: 0, zIndex: 10, padding: Spacing.three },
-  brandBadge: { backgroundColor: 'rgba(249,246,240,0.92)', borderRadius: Radius.pill, paddingVertical: 6, paddingHorizontal: 12, alignSelf: 'flex-start' },
   filterOverlay: { position: 'absolute', top: 0, left: 0, right: 0 },
   filterScroll: { flexGrow: 0, flexShrink: 0, alignSelf: 'stretch' }, filterBar: { flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'center', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingVertical: 10 },
   filterChip: { flexShrink: 0, flexGrow: 0, alignSelf: 'center', backgroundColor: 'rgba(255,255,255,0.96)', borderRadius: Radius.pill, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: Colors.light.border, shadowColor: '#2E2A26', shadowOpacity: 0.1, shadowRadius: 6, elevation: 2 }, filterChipActive: { backgroundColor: Colors.light.primary, borderColor: Colors.light.primary }, filterChipText: { fontSize: 13, fontWeight: '700', color: Colors.light.text }, filterChipTextActive: { color: Colors.light.onPrimary },
-  pin: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, backgroundColor: Colors.light.backgroundElement, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 5, elevation: 3 }, pinSelected: { backgroundColor: Colors.light.primary, borderColor: Colors.light.primary, transform: [{ scale: 1.18 }] }, pinEmoji: { fontSize: 16, lineHeight: 20 },
+  pin: { alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 3, shadowOffset: { width: 0, height: 2 }, elevation: 4 },
   userMarker: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }, userPulse: { position: 'absolute', width: 26, height: 26, borderRadius: 13, backgroundColor: '#2563EB' }, userDot: { width: 13, height: 13, borderRadius: 7, backgroundColor: '#2563EB', borderWidth: 3, borderColor: '#FFFFFF' },
   fab: { position: 'absolute', right: Spacing.three, width: 48, height: 48, borderRadius: 24, backgroundColor: Colors.light.backgroundElement, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, elevation: 6 }, fabPressed: { opacity: 0.85 }, fabRing: { position: 'absolute', width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: Colors.light.primary }, fabDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.light.primary },
-  previewCard: { width: 260, overflow: 'hidden', backgroundColor: Colors.light.backgroundElement, borderRadius: Radius.lg, shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 14, elevation: 8 }, previewImage: { width: '100%', height: 110, backgroundColor: '#D6D3D1' }, previewContent: { padding: 12, gap: 4 }, previewName: { color: Colors.light.text, fontSize: 16, fontWeight: '800' }, previewMeta: { color: Colors.light.textSecondary, fontSize: 12 }, previewRating: { color: Colors.light.text, fontSize: 13, fontWeight: '700' }, badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 }, badge: { maxWidth: 112, paddingHorizontal: 7, paddingVertical: 3, borderRadius: Radius.pill, backgroundColor: '#E4F0E6' }, badgeText: { color: Colors.light.primary, fontSize: 10, fontWeight: '700' }, viewProfileButton: { marginTop: 4, alignItems: 'center', borderRadius: Radius.sm, paddingVertical: 8, backgroundColor: Colors.light.primary }, viewProfileText: { color: Colors.light.onPrimary, fontSize: 13, fontWeight: '800' },
+  previewCard: { width: 260, overflow: 'hidden', backgroundColor: Colors.light.backgroundElement, borderRadius: Radius.lg, shadowColor: '#000', shadowOpacity: 0.22, shadowRadius: 14, elevation: 8 }, previewImage: { width: '100%', height: 110, backgroundColor: '#D6D3D1' }, previewContent: { padding: 12, gap: 4 }, previewName: { color: Colors.light.text, fontSize: 16, fontWeight: '800' }, previewMeta: { color: Colors.light.textSecondary, fontSize: 12 }, previewRating: { color: Colors.light.text, fontSize: 13, fontWeight: '700' }, previewCount: { color: Colors.light.textSecondary, fontSize: 12, fontWeight: '600' }, previewDesc: { color: Colors.light.textSecondary, fontSize: 12, lineHeight: 16 }, badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 }, badge: { maxWidth: 112, paddingHorizontal: 7, paddingVertical: 3, borderRadius: Radius.pill, backgroundColor: '#E4F0E6' }, badgeText: { color: Colors.light.primary, fontSize: 10, fontWeight: '700' }, viewProfileButton: { marginTop: 4, alignItems: 'center', borderRadius: Radius.sm, paddingVertical: 8, backgroundColor: Colors.light.primary }, viewProfileText: { color: Colors.light.onPrimary, fontSize: 13, fontWeight: '800' },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 8, backgroundColor: Colors.light.backgroundElement, borderTopLeftRadius: 22, borderTopRightRadius: 22, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 14, elevation: 12 }, sheetHandleArea: { alignItems: 'center', paddingHorizontal: Spacing.three, paddingBottom: 2 }, sheetHandle: { width: 42, height: 5, borderRadius: Radius.pill, backgroundColor: '#C9C4BA', marginBottom: 3 }, sheetHeader: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.two }, sheetTitle: { color: Colors.light.text, fontSize: 16, fontWeight: '800' }, sheetList: { paddingHorizontal: Spacing.three, paddingBottom: Spacing.four, gap: Spacing.two }, listCard: { flexDirection: 'row', gap: 12, padding: 8, borderRadius: Radius.md, backgroundColor: Colors.light.background }, listCardSelected: { backgroundColor: '#E4F0E6', borderWidth: 1, borderColor: Colors.light.primary }, listImage: { width: 68, height: 68, borderRadius: Radius.sm, backgroundColor: '#D6D3D1' }, listContent: { flex: 1, justifyContent: 'center', gap: 3 }, listName: { color: Colors.light.text, fontSize: 14, fontWeight: '800' }, listMeta: { color: Colors.light.textSecondary, fontSize: 12 }, listRating: { color: Colors.light.text, fontSize: 12, fontWeight: '600' }, emptyText: { color: Colors.light.textSecondary, paddingVertical: Spacing.four, textAlign: 'center' },
 });
