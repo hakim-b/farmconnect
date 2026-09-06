@@ -57,12 +57,14 @@ export default function WelcomeScreen() {
   return (
     <Screen scroll={false}>
       <View style={styles.hero}>
-        <FarmConnectMark size={76} />
+        <View style={styles.lockup}>
+          <FarmConnectMark size={44} />
+          <ThemedText type="title" style={styles.title}>
+            FarmConnect
+          </ThemedText>
+        </View>
         <ThemedText type="smallBold" style={styles.kicker}>
           Local farms, one place
-        </ThemedText>
-        <ThemedText type="title" style={styles.title}>
-          FarmConnect
         </ThemedText>
         <ThemedText themeColor="textSecondary" style={styles.lede}>
           Buy produce and meats, book slaughter appointments, and find farm activities — without
@@ -102,17 +104,23 @@ const styles = StyleSheet.create({
   hero: {
     flex: 1,
     justifyContent: 'center',
-    gap: Spacing.three,
+    gap: Spacing.two,
     paddingTop: Spacing.six,
+  },
+  lockup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
   },
   kicker: {
     color: '#2F6B3A',
     textTransform: 'uppercase',
     letterSpacing: 1,
+    marginTop: Spacing.two,
   },
   title: {
-    fontSize: 44,
-    lineHeight: 48,
+    fontSize: 34,
+    lineHeight: 38,
   },
   lede: {
     fontSize: 16,

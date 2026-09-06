@@ -12,7 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from 'heroui-native';
 
-import { FarmConnectMark } from '@/components/logo';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Font, Radius, Spacing } from '@/constants/theme';
@@ -47,12 +46,11 @@ export function FormScreen({
   return (
     <ThemedView style={styles.root}>
       <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
-        <View style={[styles.topBar, styles.topBarSplit]}>
+        <View style={styles.topBar}>
           <Pressable onPress={onBack} hitSlop={12} style={styles.back}>
             <SymbolView name="chevron.left" size={22} tintColor={theme.text} />
             <ThemedText type="smallBold">{backLabel}</ThemedText>
           </Pressable>
-          <FarmConnectMark size={22} />
         </View>
         <KeyboardAvoidingView
           style={styles.flex}
@@ -402,7 +400,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
   },
-  topBarSplit: { justifyContent: 'space-between' },
   back: { flexDirection: 'row', alignItems: 'center', gap: Spacing.half },
   content: { padding: Spacing.four, paddingTop: Spacing.three },
   title: { fontFamily: Font.bold, fontSize: 28, lineHeight: 34 },

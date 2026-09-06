@@ -23,7 +23,7 @@ export function AccountHeader({
   return (
     <View style={styles.wrap}>
       <View style={styles.brandRow}>
-        <Wordmark markSize={24} />
+        <Wordmark markSize={22} />
         <Button size="sm" variant="secondary" onPress={() => signOut()}>
           Sign out
         </Button>
@@ -40,7 +40,7 @@ export function AccountHeader({
 
 const styles = StyleSheet.create({
   wrap: {
-    gap: Spacing.three,
+    gap: Spacing.two,
   },
   brandRow: {
     flexDirection: 'row',

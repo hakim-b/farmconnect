@@ -15,13 +15,10 @@ import { FARM_TYPE_LABELS, formatRating, type Farm } from '@/lib/types';
 
 type Category = 'Produce & Meats' | 'Slaughter' | 'Activities' | 'Mixed';
 type BadgeFilter = 'Halal Certified' | 'Organic' | 'Grass-Fed';
-type PriceFilter = '$' | '$$' | '$$$';
 type RatingFilter = '4.0+' | '4.5+';
 const CATEGORIES: Category[] = ['Produce & Meats', 'Slaughter', 'Activities', 'Mixed'];
 const BADGES: BadgeFilter[] = ['Halal Certified', 'Organic', 'Grass-Fed'];
-const PRICES: PriceFilter[] = ['$', '$$', '$$$'];
 const RATINGS: RatingFilter[] = ['4.0+', '4.5+'];
-const PRICE_TIER: Record<PriceFilter, number> = { $: 1, $$: 2, $$$: 3 };
 
 function categoryFor(farm: Farm): Category {
   if (farm.farm_type === 'slaughter_only') return 'Slaughter';
@@ -42,7 +39,7 @@ function matchesCategory(farm: Farm, category: Category): boolean {
       return true;
   }
 }
-function priceLabel(tier: number): PriceFilter {
+function priceLabel(tier: number): string {
   return tier <= 1 ? '$' : tier === 2 ? '$$' : '$$$';
 }
 function tierColor(tier: number): string {
@@ -78,7 +75,6 @@ export default function MapScreen() {
   const [sheetTop, setSheetTop] = useState(350);
   const [category, setCategory] = useState<Category | null>(null);
   const [badges, setBadges] = useState<BadgeFilter[]>([]);
-  const [price, setPrice] = useState<PriceFilter | null>(null);
   const [rating, setRating] = useState<RatingFilter | null>(null);
 
   const load = useCallback(async () => {
@@ -122,10 +118,9 @@ export default function MapScreen() {
 
   const visibleFarms = useMemo(() => farms.filter((farm) => {
     if (category && !matchesCategory(farm, category)) return false;
-    if (price && farm.price_tier !== PRICE_TIER[price]) return false;
     if (rating && farm.average_rating < Number(rating.slice(0, -1))) return false;
     return badges.every((badge) => hasBadge(farm, badge));
-  }), [badges, category, farms, price, rating]);
+  }), [badges, category, farms, rating]);
 
   const openFarm = useCallback((farm: Farm) => {
     router.push({ pathname: '/farm/[id]', params: { id: String(farm.id) } });
@@ -171,11 +166,9 @@ export default function MapScreen() {
       <FilterBar
         category={category}
         badges={badges}
-        price={price}
         rating={rating}
         onCategory={(value) => setCategory(category === value ? null : value)}
         onBadge={toggleBadge}
-        onPrice={(value) => setPrice(price === value ? null : value)}
         onRating={(value) => setRating(rating === value ? null : value)}
       />
     </SafeAreaView>
@@ -206,7 +199,7 @@ function RecenterButton({ onPress, bottom }: { onPress: () => void; bottom: numb
   </Pressable>;
 }
 
-function FilterBar({ category, badges, price, rating, onCategory, onBadge, onPrice, onRating }: { category: Category | null; badges: BadgeFilter[]; price: PriceFilter | null; rating: RatingFilter | null; onCategory: (value: Category) => void; onBadge: (value: BadgeFilter) => void; onPrice: (value: PriceFilter) => void; onRating: (value: RatingFilter) => void }) {
+function FilterBar({ category, badges, rating, onCategory, onBadge, onRating }: { category: Category | null; badges: BadgeFilter[]; rating: RatingFilter | null; onCategory: (value: Category) => void; onBadge: (value: BadgeFilter) => void; onRating: (value: RatingFilter) => void }) {
   return <ScrollView
     horizontal
     showsHorizontalScrollIndicator={false}
@@ -215,7 +208,6 @@ function FilterBar({ category, badges, price, rating, onCategory, onBadge, onPri
     contentContainerStyle={styles.filterBar}>
     {CATEGORIES.map((value) => <FilterChip key={value} label={value} active={category === value} onPress={() => onCategory(value)} />)}
     {BADGES.map((value) => <FilterChip key={value} label={value} active={badges.includes(value)} onPress={() => onBadge(value)} />)}
-    {PRICES.map((value) => <FilterChip key={value} label={value} active={price === value} onPress={() => onPrice(value)} />)}
     {RATINGS.map((value) => <FilterChip key={value} label={`★ ${value}`} active={rating === value} onPress={() => onRating(value)} />)}
   </ScrollView>;
 }

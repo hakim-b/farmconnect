@@ -19,6 +19,9 @@ export default function CustomerTabs() {
         <TabTrigger name="map" href="/(customer)/map" asChild>
           <TabButton>Map</TabButton>
         </TabTrigger>
+        <TabTrigger name="cart" href="/(customer)/cart" asChild>
+          <TabButton>Cart</TabButton>
+        </TabTrigger>
         <TabTrigger name="bookings" href="/(customer)/bookings" asChild>
           <TabButton>Bookings</TabButton>
         </TabTrigger>

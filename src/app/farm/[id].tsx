@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { Button, Tabs } from 'heroui-native';
 
+import { AddToCartSheet } from '@/components/add-to-cart-sheet';
 import { CertificationRow } from '@/components/farm-card';
 import { ProductCard } from '@/components/product-card';
 import { EmptyState, LoadingScreen, Screen } from '@/components/screen';
@@ -42,6 +43,7 @@ export default function FarmProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [invitees, setInvitees] = useState('');
   const [message, setMessage] = useState<string | null>(null);
+  const [sheetProduct, setSheetProduct] = useState<Product | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(farmId)) return;
@@ -184,7 +186,23 @@ export default function FarmProfileScreen() {
             {products.length === 0 ? (
               <EmptyState title="No items listed" body="This farm has not posted produce or meats." />
             ) : (
-              products.map((product) => <ProductCard key={product.id} product={product} />)
+              products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onPress={(p) =>
+                    setSheetProduct({
+                      ...p,
+                      farms: {
+                        id: farm.id,
+                        name: farm.name,
+                        slug: farm.slug,
+                        thumbnail_url: farm.thumbnail_url,
+                      },
+                    })
+                  }
+                />
+              ))
             )}
           </View>
         </Tabs.Content>
@@ -274,6 +292,12 @@ export default function FarmProfileScreen() {
           )}
         </Tabs.Content>
       </Tabs>
+
+      <AddToCartSheet
+        key={sheetProduct?.id ?? 'none'}
+        product={sheetProduct}
+        onClose={() => setSheetProduct(null)}
+      />
 
       {reviews.length > 0 ? (
         <View style={styles.section}>

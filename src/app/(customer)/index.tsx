@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AccountHeader } from '@/components/account-header';
+import { AddToCartSheet } from '@/components/add-to-cart-sheet';
 import { FarmCard } from '@/components/farm-card';
 import { ProductCard } from '@/components/product-card';
 import { EmptyState, LoadingScreen, Screen } from '@/components/screen';
@@ -18,6 +19,7 @@ export default function CustomerHomeScreen() {
   const [sales, setSales] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sheetProduct, setSheetProduct] = useState<Product | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,7 +71,7 @@ export default function CustomerHomeScreen() {
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
             {sales.map((product) => (
-              <ProductCard key={product.id} product={product} compact />
+              <ProductCard key={product.id} product={product} compact onPress={setSheetProduct} />
             ))}
           </ScrollView>
         )}
@@ -83,6 +85,12 @@ export default function CustomerHomeScreen() {
           farms.map((farm) => <FarmCard key={farm.id} farm={farm} />)
         )}
       </View>
+
+      <AddToCartSheet
+        key={sheetProduct?.id ?? 'none'}
+        product={sheetProduct}
+        onClose={() => setSheetProduct(null)}
+      />
     </Screen>
   );
 }
