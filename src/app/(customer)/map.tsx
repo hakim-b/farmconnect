@@ -3,8 +3,10 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, FlatList, PanResponder, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Map, MapMarker, MarkerContent, MarkerTooltip, type MapHandle, type MapRegion } from '@/components/ui/mapcn-marker-tooltip';
+import { Wordmark } from '@/components/logo';
 import { LoadingScreen } from '@/components/screen';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { usePublicSupabase } from '@/hooks/use-supabase';
@@ -102,6 +104,11 @@ export default function MapScreen() {
   if (loading) return <LoadingScreen />;
 
   return <View style={styles.root}>
+    <SafeAreaView pointerEvents="box-none" style={styles.brandBadgeWrap} edges={['top']}>
+      <View style={styles.brandBadge}>
+        <Wordmark markSize={20} />
+      </View>
+    </SafeAreaView>
     <Map ref={mapRef} initialRegion={regionFor(userLocation.latitude, userLocation.longitude)} onPress={() => setSelectedFarmId(null)}>
       <UserLocationMarker coordinate={userLocation} />
       {visibleFarms.map((farm) => farm.latitude != null && farm.longitude != null ? <MapMarker key={farm.id} coordinate={{ latitude: farm.latitude, longitude: farm.longitude }} onPress={() => selectFarm(farm)}>
@@ -162,6 +169,8 @@ function NearbySheet({ farms, selectedFarmId, onSelect, filters }: { farms: Farm
 
 const styles = StyleSheet.create({
   root: { flex: 1, width: '100%', height: '100%', position: 'relative', alignSelf: 'stretch', backgroundColor: Colors.light.background }, filterScroll: { flexGrow: 0, width: '100%' }, filterBar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingHorizontal: Spacing.three, paddingVertical: 10 },
+  brandBadgeWrap: { position: 'absolute', top: 0, left: 0, zIndex: 10, padding: Spacing.three },
+  brandBadge: { backgroundColor: 'rgba(249,246,240,0.92)', borderRadius: Radius.pill, paddingVertical: 6, paddingHorizontal: 12, alignSelf: 'flex-start' },
   filterChip: { backgroundColor: 'rgba(255,255,255,0.96)', borderRadius: Radius.pill, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: Colors.light.border, shadowColor: '#2E2A26', shadowOpacity: 0.1, shadowRadius: 6, elevation: 2 }, filterChipActive: { backgroundColor: Colors.light.primary, borderColor: Colors.light.primary }, filterChipText: { color: Colors.light.text, fontSize: 13, fontWeight: '700' }, filterChipTextActive: { color: Colors.light.onPrimary },
   pin: { backgroundColor: Colors.light.backgroundElement, borderColor: Colors.light.primary, borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 7, shadowColor: '#000', shadowOpacity: 0.16, shadowRadius: 5, elevation: 3 }, pinSelected: { backgroundColor: Colors.light.primary, transform: [{ scale: 1.08 }] }, pinText: { color: Colors.light.text, fontSize: 12, fontWeight: '700' }, pinTextSelected: { color: Colors.light.onPrimary },
   userMarker: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' }, userPulse: { position: 'absolute', width: 26, height: 26, borderRadius: 13, backgroundColor: '#2563EB' }, userDot: { width: 13, height: 13, borderRadius: 7, backgroundColor: '#2563EB', borderWidth: 3, borderColor: '#FFFFFF' },

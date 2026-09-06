@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from 'heroui-native';
 
+import { FarmConnectMark } from '@/components/logo';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Font, Radius, Spacing } from '@/constants/theme';
@@ -58,6 +59,7 @@ export function WizardShell({
             ) : null}
             <ThemedText type="smallBold">{backLabel}</ThemedText>
           </Pressable>
+          <FarmConnectMark size={22} />
           <ThemedText type="small" themeColor="textSecondary">
             Step {step} of {total}
           </ThemedText>

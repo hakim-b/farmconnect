@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button } from 'heroui-native';
 
+import { Wordmark } from '@/components/logo';
 import { EmptyState, LoadingScreen, Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -63,6 +64,7 @@ export default function CustomerEidScreen() {
 
   return (
     <Screen>
+      <Wordmark markSize={22} style={styles.brand} />
       <ThemedText type="subtitle">Eid al-Adha</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         Pre-register with a farm. The farmer assigns your date and time from their queue.
@@ -123,6 +125,7 @@ export default function CustomerEidScreen() {
 }
 
 const styles = StyleSheet.create({
+  brand: { marginBottom: Spacing.two },
   card: {
     padding: Spacing.three,
     borderRadius: Spacing.three,

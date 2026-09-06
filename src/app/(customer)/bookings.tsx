@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Button } from 'heroui-native';
 
+import { Wordmark } from '@/components/logo';
 import { EmptyState, LoadingScreen, Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -40,6 +41,7 @@ export default function CustomerBookingsScreen() {
 
   return (
     <Screen>
+      <Wordmark markSize={22} style={styles.brand} />
       <ThemedText type="subtitle">Your bookings</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         Slaughter appointments and farm activities you have requested.
@@ -80,6 +82,7 @@ export default function CustomerBookingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  brand: { marginBottom: Spacing.two },
   card: {
     padding: Spacing.three,
     borderRadius: Spacing.three,
