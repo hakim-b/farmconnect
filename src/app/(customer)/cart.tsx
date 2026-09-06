@@ -10,6 +10,7 @@ import { Stepper } from '@/components/vendor-ui';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useCart } from '@/lib/cart';
+import { productPhoto } from '@/lib/photos';
 import { formatPrice } from '@/lib/types';
 
 export default function CartScreen() {
@@ -38,7 +39,7 @@ export default function CartScreen() {
           {lines.map(({ product, qty }) => (
             <ThemedView key={product.id} type="backgroundElement" style={styles.row}>
               <Image
-                source={{ uri: product.image_url ?? undefined }}
+                source={{ uri: productPhoto(product) }}
                 style={styles.image}
                 contentFit="cover"
               />

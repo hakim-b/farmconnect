@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useCart } from '@/lib/cart';
+import { productPhoto } from '@/lib/photos';
 import { formatPrice, type Product } from '@/lib/types';
 
 export function ProductCard({
@@ -31,7 +32,7 @@ export function ProductCard({
       <ThemedView type="backgroundElement" style={styles.card}>
         <View>
           <Image
-            source={{ uri: product.image_url ?? undefined }}
+            source={{ uri: productPhoto(product) }}
             style={[styles.image, compact && styles.compactImage, { backgroundColor: theme.backgroundSelected }]}
             contentFit="cover"
             transition={150}

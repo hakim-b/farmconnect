@@ -11,7 +11,8 @@ import { ReserveSlotSheet, type ReserveTarget } from '@/components/reserve-slot-
 import { EmptyState, LoadingScreen, Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { itemPhoto } from '@/lib/photos';
 import { usePublicSupabase } from '@/hooks/use-supabase';
 import {
   FARM_TYPE_LABELS,
@@ -208,6 +209,19 @@ export default function FarmProfileScreen() {
             <>
               {offerings.map((offering) => (
                 <ThemedView key={offering.id} type="backgroundElement" style={styles.card}>
+                  <Image
+                    source={{
+                      uri: itemPhoto({
+                        id: offering.id,
+                        name: offering.name,
+                        image_url: offering.image_url,
+                        kind: 'animal',
+                      }),
+                    }}
+                    style={styles.cardImage}
+                    contentFit="cover"
+                    transition={150}
+                  />
                   <ThemedText type="smallBold">{offering.name}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
                     {offering.description}
@@ -262,6 +276,19 @@ export default function FarmProfileScreen() {
           ) : (
             activities.map((activity) => (
               <ThemedView key={activity.id} type="backgroundElement" style={styles.card}>
+                <Image
+                  source={{
+                    uri: itemPhoto({
+                      id: activity.id,
+                      name: activity.name,
+                      image_url: activity.image_url,
+                      kind: 'activity',
+                    }),
+                  }}
+                  style={styles.cardImage}
+                  contentFit="cover"
+                  transition={150}
+                />
                 <ThemedText type="smallBold">{activity.name}</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   {activity.description}
@@ -365,6 +392,13 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     gap: Spacing.one,
     marginTop: Spacing.two,
+  },
+  cardImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.two,
+    backgroundColor: '#D6D3D1',
   },
   help: {
     marginTop: Spacing.three,

@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Stepper } from '@/components/vendor-ui';
 import { Radius, Spacing } from '@/constants/theme';
 import { useCart } from '@/lib/cart';
+import { productPhoto } from '@/lib/photos';
 import { formatPrice, type Product } from '@/lib/types';
 
 /**
@@ -45,7 +46,7 @@ export function AddToCartSheet({
           <View style={styles.handle} />
 
           <Image
-            source={{ uri: product.image_url ?? undefined }}
+            source={{ uri: productPhoto(product) }}
             style={styles.image}
             contentFit="cover"
             transition={150}
