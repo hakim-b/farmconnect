@@ -6,6 +6,7 @@ import { LoadingScreen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BigChoice } from '@/components/wizard';
+import { PhotoField } from '@/components/photo-field';
 import { Field, FormScreen, Segmented, Stepper } from '@/components/vendor-ui';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -25,6 +26,7 @@ type Draft = {
   quantity: number;
   trackStock: boolean;
   shares: number; // animal: how many families can share
+  photo: string | null;
 };
 
 const EMPTY: Draft = {
@@ -34,6 +36,7 @@ const EMPTY: Draft = {
   quantity: 10,
   trackStock: true,
   shares: 4,
+  photo: null,
 };
 
 export default function VendorItemScreen() {
@@ -68,6 +71,7 @@ export default function VendorItemScreen() {
           quantity: Number(row.stock_quantity ?? 10),
           trackStock: row.stock_quantity != null,
           shares: Number(row.max_split_participants ?? 4),
+          photo: (row.image_url as string) ?? null,
         });
       }
       setSeeded(true);
@@ -123,6 +127,7 @@ export default function VendorItemScreen() {
     try {
       const table = ITEM_KIND[kind].table;
       let payload: Record<string, unknown>;
+      const image_url = draft.photo;
       if (kind === 'produce' || kind === 'meat') {
         payload = {
           farm_id: farm.id,
@@ -132,6 +137,7 @@ export default function VendorItemScreen() {
           unit: kind === 'meat' ? 'kg' : draft.unit,
           price: priceNumber,
           stock_quantity: draft.trackStock ? draft.quantity : null,
+          image_url,
         };
       } else if (kind === 'animal') {
         payload = {
@@ -140,9 +146,10 @@ export default function VendorItemScreen() {
           name: draft.name.trim(),
           price: priceNumber,
           max_split_participants: draft.shares,
+          image_url,
         };
       } else {
-        payload = { farm_id: farm.id, name: draft.name.trim(), price: priceNumber };
+        payload = { farm_id: farm.id, name: draft.name.trim(), price: priceNumber, image_url };
       }
 
       const { error } = editingId
@@ -166,6 +173,8 @@ export default function VendorItemScreen() {
       saveLabel={editingId ? 'Save changes' : 'Add to my items'}
       saveDisabled={!canSave}
       saving={saving}>
+      <PhotoField value={draft.photo} onChange={(url) => set('photo', url)} />
+
       <Field label={kind === 'animal' ? 'Which animal?' : 'What is it called?'}>
         <TextInput
           value={draft.name}

@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { type ReactNode } from 'react';
 import {
@@ -259,18 +260,20 @@ export function HourPicker({
 
 export { HOUR_LABELS as formatHour };
 
-/** A large list row: title, subtitle, optional right-side control, tap to open. */
+/** A large list row: optional photo, title, subtitle, optional right control. */
 export function BigRow({
   title,
   subtitle,
   onPress,
   right,
+  image,
   tone = 'default',
 }: {
   title: string;
   subtitle?: string;
   onPress?: () => void;
   right?: ReactNode;
+  image?: string | null;
   tone?: 'default' | 'muted';
 }) {
   const theme = useTheme();
@@ -286,6 +289,15 @@ export function BigRow({
           opacity: tone === 'muted' ? 0.6 : pressed ? 0.9 : 1,
         },
       ]}>
+      {image !== undefined ? (
+        image ? (
+          <Image source={image} style={styles.thumb} contentFit="cover" transition={120} />
+        ) : (
+          <View style={[styles.thumb, styles.thumbEmpty, { backgroundColor: theme.backgroundSelected }]}>
+            <SymbolView name="photo" size={18} tintColor={theme.textSecondary} />
+          </View>
+        )
+      ) : null}
       <View style={{ flex: 1, gap: 2 }}>
         <ThemedText type="heading">{title}</ThemedText>
         {subtitle ? (
@@ -447,6 +459,15 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     padding: Spacing.three,
     minHeight: 64,
+  },
+  thumb: {
+    width: 52,
+    height: 52,
+    borderRadius: Radius.sm,
+  },
+  thumbEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addBtn: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState, type ReactNode } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { AccountHeader } from '@/components/account-header';
@@ -35,9 +35,12 @@ export default function VendorInventoryScreen() {
     setActivities((a.data as Activity[]) ?? []);
   }, [farmId, supabase]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // reload every time the screen comes back into focus (e.g. after adding an item)
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   if (loading) return <LoadingScreen />;
   if (!farm) return null;
@@ -82,6 +85,7 @@ export default function VendorInventoryScreen() {
                 p.unit,
               )}${p.stock_quantity != null ? ` · ${p.stock_quantity} left` : ''}`}
               onPress={() => router.push(`/vendor-item?id=${p.id}&kind=produce`)}
+              image={p.image_url}
               right={
                 <TogglePill
                   on={p.is_available}
@@ -107,6 +111,7 @@ export default function VendorInventoryScreen() {
                 p.unit,
               )}${p.stock_quantity != null ? ` · ${p.stock_quantity} kg left` : ''}`}
               onPress={() => router.push(`/vendor-item?id=${p.id}&kind=meat`)}
+              image={p.image_url}
               right={
                 <TogglePill
                   on={p.is_available}
@@ -128,6 +133,7 @@ export default function VendorInventoryScreen() {
               title={o.name}
               subtitle={`${money(o.price)} · up to ${o.max_split_participants} families`}
               onPress={() => router.push(`/vendor-item?id=${o.id}&kind=animal`)}
+              image={o.image_url}
               right={
                 <TogglePill
                   on={o.is_available}
@@ -149,6 +155,7 @@ export default function VendorInventoryScreen() {
               title={a.name}
               subtitle={a.price === 0 ? 'Free' : money(a.price)}
               onPress={() => router.push(`/vendor-item?id=${a.id}&kind=activity`)}
+              image={a.image_url}
               right={
                 <TogglePill
                   on={a.is_available}
