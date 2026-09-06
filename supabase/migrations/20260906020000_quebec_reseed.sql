@@ -3,6 +3,49 @@
 -- migrations). Safe to re-run: it deletes the seed vendor's farms first and
 -- everything under them cascades.
 
+-- Make sure the price-tier column + helper exist (they come from
+-- 20260905210000_farm_price_tier.sql; this re-declares them so the reseed
+-- works even if that migration was never applied).
+alter table public.farms
+  add column if not exists price_tier smallint not null default 2;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'farms_price_tier_check') then
+    alter table public.farms
+      add constraint farms_price_tier_check check (price_tier between 1 and 3);
+  end if;
+end;
+$$;
+
+create or replace function private.farm_price_tier(p_farm_id bigint)
+returns smallint
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with prices as (
+    select price from public.products
+      where farm_id = p_farm_id and is_available and price > 0
+    union all
+    select price from public.activities
+      where farm_id = p_farm_id and is_available and price > 0
+    union all
+    select price from public.slaughter_offerings
+      where farm_id = p_farm_id and is_available and price > 0
+  )
+  select case
+    when min(price) is null then 2
+    when min(price) < 25 then 1
+    when min(price) < 75 then 2
+    else 3
+  end::smallint
+  from prices;
+$$;
+
+revoke all on function private.farm_price_tier(bigint) from public;
+
 insert into public.profiles (clerk_user_id, role, display_name)
 values ('seed_vendor', 'vendor', 'FarmConnect Demo Farms')
 on conflict (clerk_user_id) do nothing;
