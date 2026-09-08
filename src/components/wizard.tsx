@@ -1,5 +1,6 @@
-import { SymbolView } from 'expo-symbols';
-import { type ReactNode } from 'react';
+import { SymbolView } from "expo-symbols";
+import { Button } from "heroui-native";
+import { type ReactNode } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,14 +10,13 @@ import {
   TextInput,
   View,
   type TextInputProps,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from 'heroui-native';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Font, Radius, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Font, Radius, Spacing } from "@/constants/theme";
+import { useTheme } from "@/hooks/use-theme";
 
 type WizardShellProps = {
   step: number; // 1-based
@@ -38,9 +38,9 @@ export function WizardShell({
   title,
   subtitle,
   onBack,
-  backLabel = 'Back',
+  backLabel = "Back",
   onNext,
-  nextLabel = 'Next',
+  nextLabel = "Next",
   nextDisabled = false,
   nextBusy = false,
   children,
@@ -50,11 +50,15 @@ export function WizardShell({
 
   return (
     <ThemedView style={styles.root}>
-      <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.flex} edges={["top", "bottom"]}>
         <View style={styles.topBar}>
           <Pressable onPress={onBack} hitSlop={12} style={styles.back}>
-            {backLabel === 'Back' ? (
-              <SymbolView name="chevron.left" size={22} tintColor={theme.text} />
+            {backLabel === "Back" ? (
+              <SymbolView
+                name="chevron.left"
+                size={22}
+                tintColor={theme.text}
+              />
             ) : null}
             <ThemedText type="smallBold">{backLabel}</ThemedText>
           </Pressable>
@@ -63,19 +67,26 @@ export function WizardShell({
           </ThemedText>
         </View>
 
-        <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]}>
+        <View
+          style={[styles.track, { backgroundColor: theme.backgroundSelected }]}
+        >
           <View
-            style={[styles.fill, { backgroundColor: theme.primary, width: `${progress * 100}%` }]}
+            style={[
+              styles.fill,
+              { backgroundColor: theme.primary, width: `${progress * 100}%` },
+            ]}
           />
         </View>
 
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
           <ScrollView
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}>
+            showsVerticalScrollIndicator={false}
+          >
             <ThemedText style={styles.title}>{title}</ThemedText>
             {subtitle ? (
               <ThemedText style={styles.subtitle} themeColor="textSecondary">
@@ -89,8 +100,9 @@ export function WizardShell({
             <Button
               size="lg"
               isDisabled={nextDisabled || nextBusy}
-              onPress={onNext}>
-              {nextBusy ? 'Please wait…' : nextLabel}
+              onPress={onNext}
+            >
+              {nextBusy ? "Please wait…" : nextLabel}
             </Button>
           </View>
         </KeyboardAvoidingView>
@@ -106,12 +118,14 @@ export function BigChoice({
   selected,
   onPress,
   icon,
+  iconElement,
 }: {
   title: string;
   description?: string;
   selected: boolean;
   onPress: () => void;
-  icon?: Parameters<typeof SymbolView>[0]['name'];
+  icon?: Parameters<typeof SymbolView>[0]["name"];
+  iconElement?: ReactNode;
 }) {
   const theme = useTheme();
   return (
@@ -125,10 +139,18 @@ export function BigChoice({
           borderWidth: selected ? 2 : 1,
           opacity: pressed ? 0.9 : 1,
         },
-      ]}>
-      {icon ? (
-        <View style={[styles.choiceIcon, { backgroundColor: theme.backgroundSelected }]}>
-          <SymbolView name={icon} size={26} tintColor={theme.primary} />
+      ]}
+    >
+      {icon || iconElement ? (
+        <View
+          style={[
+            styles.choiceIcon,
+            { backgroundColor: theme.backgroundSelected },
+          ]}
+        >
+          {iconElement ?? (
+            <SymbolView name={icon!} size={26} tintColor={theme.primary} />
+          )}
         </View>
       ) : null}
       <View style={styles.choiceText}>
@@ -140,7 +162,7 @@ export function BigChoice({
         ) : null}
       </View>
       <SymbolView
-        name={selected ? 'checkmark.circle.fill' : 'circle'}
+        name={selected ? "checkmark.circle.fill" : "circle"}
         size={24}
         tintColor={selected ? theme.primary : theme.border}
       />
@@ -158,8 +180,16 @@ export function YesNo({
 }) {
   return (
     <View style={styles.stack}>
-      <BigChoice title="Yes" selected={value === true} onPress={() => onChange(true)} />
-      <BigChoice title="No" selected={value === false} onPress={() => onChange(false)} />
+      <BigChoice
+        title="Yes"
+        selected={value === true}
+        onPress={() => onChange(true)}
+      />
+      <BigChoice
+        title="No"
+        selected={value === false}
+        onPress={() => onChange(false)}
+      />
     </View>
   );
 }
@@ -179,7 +209,11 @@ export function WizardField({
         placeholderTextColor={theme.textSecondary}
         style={[
           styles.input,
-          { color: theme.text, backgroundColor: theme.surface, borderColor: theme.border },
+          {
+            color: theme.text,
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+          },
           style,
         ]}
         {...rest}
@@ -197,24 +231,24 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   flex: { flex: 1 },
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.two,
   },
   back: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.half,
   },
   track: {
     height: 6,
     marginHorizontal: Spacing.four,
     borderRadius: Radius.pill,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
-  fill: { height: '100%', borderRadius: Radius.pill },
+  fill: { height: "100%", borderRadius: Radius.pill },
   content: {
     padding: Spacing.four,
     paddingTop: Spacing.five,
@@ -239,8 +273,8 @@ const styles = StyleSheet.create({
   },
   stack: { gap: Spacing.three },
   choice: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.three,
     borderRadius: Radius.lg,
     padding: Spacing.three,
@@ -250,8 +284,8 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: Radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   choiceText: { flex: 1, gap: Spacing.half },
   field: { gap: Spacing.one },
