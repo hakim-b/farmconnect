@@ -6,7 +6,7 @@
 ## 🌾 Core Concept
 Currently, people discover local farms primarily through fragmented WhatsApp or Facebook groups, and word-of-mouth. **FarmConnect** provides a streamlined, centralized platform offering an alternative for local farmers to sell produce, meats, and host activities directly to consumers. 
 
-**Tech Stack:** React Native (iOS, Android, Web), supabase, clerk, hero.ui
+**Tech Stack:** React Native (iOS, Android, Web), Supabase, Hero UI
 
 ---
 

@@ -10,7 +10,7 @@ export type SlotType = 'slaughter' | 'activity';
 
 export type Profile = {
   id: number;
-  clerk_user_id: string;
+  auth_user_id: string | null;
   role: UserRole;
   display_name: string | null;
   first_name: string | null;

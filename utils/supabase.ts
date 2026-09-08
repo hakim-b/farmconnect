@@ -1,1 +1,1 @@
-export { createClerkSupabaseClient, publicSupabase } from '@/lib/supabase';
+export { publicSupabase, supabase } from '@/lib/supabase';

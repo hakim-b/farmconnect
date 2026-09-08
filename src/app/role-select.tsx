@@ -1,4 +1,3 @@
-import { useAuth, useUser } from '@clerk/expo';
 import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -9,15 +8,16 @@ import { RoleOptionCard, ROLE_OPTIONS } from '@/components/role-cards';
 import { LoadingScreen, Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
 import { useProfile } from '@/hooks/use-profile';
 import { useTheme } from '@/hooks/use-theme';
+import { identityFromUser } from '@/lib/auth';
 import { toError } from '@/lib/errors';
 import { clearPendingRole, peekPendingRole } from '@/lib/pending-role';
 import type { UserRole } from '@/lib/types';
 
 export default function RoleSelectScreen() {
-  const { isLoaded: authLoaded, isSignedIn } = useAuth();
-  const { user, isLoaded: userLoaded } = useUser();
+  const { isLoaded: authLoaded, isSignedIn, user } = useAuth();
   const { profile, loading, saveRole } = useProfile();
   const router = useRouter();
   const theme = useTheme();
@@ -31,10 +31,10 @@ export default function RoleSelectScreen() {
   const [name, setName] = useState('');
   const handled = useRef(false);
 
-  // Clerk hosted sign-up with email + password gives us no name, so customers
-  // enter one here — it becomes their account name everywhere (farmers see it
-  // on bookings and reviews).
-  const clerkName = user?.fullName ?? user?.firstName ?? null;
+  // Email + password sign-up has no name, so customers enter one here — it
+  // becomes their account name everywhere (farmers see it on bookings and reviews).
+  const identity = identityFromUser(user);
+  const knownName = identity.full ?? identity.first ?? null;
 
   const apply = async (role: UserRole, displayName?: string) => {
     setSaving(role);
@@ -51,9 +51,9 @@ export default function RoleSelectScreen() {
   };
 
   // A tapped role card, or a role picked on the welcome screen: customers with
-  // no Clerk name stop to enter one; everyone else proceeds straight through.
+  // no name stop to enter one; everyone else proceeds straight through.
   const choose = (role: UserRole) => {
-    if (role === 'customer' && !clerkName) {
+    if (role === 'customer' && !knownName) {
       setNameFor('customer');
       setChecking(false);
       return;
@@ -63,9 +63,9 @@ export default function RoleSelectScreen() {
 
   useEffect(() => {
     if (handled.current) return;
-    // Wait until Clerk has fully loaded the signed-in user, and the shared
+    // Wait until auth has fully loaded the signed-in user, and the shared
     // profile fetch has settled. Applying a role before `user` exists throws.
-    if (!authLoaded || !userLoaded || loading) return;
+    if (!authLoaded || loading) return;
     if (!isSignedIn) {
       setChecking(false);
       return;
@@ -86,9 +86,9 @@ export default function RoleSelectScreen() {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoaded, userLoaded, loading, isSignedIn, profile, user]);
+  }, [authLoaded, loading, isSignedIn, profile, user]);
 
-  if (!authLoaded || !userLoaded || loading || checking) return <LoadingScreen />;
+  if (!authLoaded || loading || checking) return <LoadingScreen />;
   if (!isSignedIn) return <Redirect href="/welcome" />;
   if (profile && !saving) {
     return <Redirect href={profile.role === 'vendor' ? '/(vendor)' : '/(customer)'} />;
@@ -148,7 +148,7 @@ export default function RoleSelectScreen() {
     );
   }
 
-  const firstName = user?.firstName;
+  const firstName = identity.first;
 
   return (
     <Screen scroll={false}>

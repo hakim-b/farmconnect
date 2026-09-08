@@ -1,9 +1,7 @@
 // Supabase calls throw a PostgrestError (or a plain fetch failure). Neither
 // reaches the UI as a reliably readable string, and PostgREST puts the
 // actionable fix in `hint`, not `message`. Flatten both here so screens can
-// show something useful, and add setup guidance for the common case: the Clerk
-// session never reaches Supabase, so RLS runs the request as `anon` and every
-// `to authenticated` policy rejects it.
+// show something useful.
 
 type SupabaseLikeError = {
   message?: string;
@@ -12,11 +10,8 @@ type SupabaseLikeError = {
   code?: string | null;
 };
 
-export const CLERK_SUPABASE_HINT =
-  "Supabase isn't accepting your Clerk sign-in, so the row was saved as a signed-out " +
-  'request and blocked. Enable the Clerk third-party auth integration in the Supabase ' +
-  'dashboard (Authentication -> Sign In / Providers -> Third-Party Auth -> Clerk), turn ' +
-  'on the Supabase integration in the Clerk dashboard, then restart the dev server.';
+export const AUTH_SESSION_HINT =
+  'This request was blocked because you are not signed in to the database. Sign out and sign in again, then retry.';
 
 function hasPostgrestFields(err: object): err is SupabaseLikeError {
   return 'code' in err || 'hint' in err || 'details' in err;
@@ -40,7 +35,6 @@ export function looksLikeAuthFailure(err: unknown): boolean {
 /** Normalise anything thrown by a Supabase call into a real Error worth showing. */
 export function toError(err: unknown): Error {
   if (err instanceof Error && !hasPostgrestFields(err)) {
-    // Plain JS or network error - keep it as-is.
     return err;
   }
 
@@ -52,6 +46,6 @@ export function toError(err: unknown): Error {
   if (e.code) parts.push(`(${e.code})`);
 
   let message = parts.join(' ') || 'Something went wrong talking to Supabase.';
-  if (looksLikeAuthFailure(err)) message += `\n\n${CLERK_SUPABASE_HINT}`;
+  if (looksLikeAuthFailure(err)) message += `\n\n${AUTH_SESSION_HINT}`;
   return new Error(message);
 }

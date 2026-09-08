@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "halalbutcherappmhacks",
+    "scheme": "farmconnect",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
@@ -34,7 +34,6 @@
         }
       ],
       "expo-secure-store",
-      "@clerk/expo",
       [
         "expo-location",
         {

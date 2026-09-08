@@ -1,4 +1,3 @@
-import { useUser } from '@clerk/expo';
 import {
   createContext,
   useCallback,
@@ -9,9 +8,11 @@ import {
   type PropsWithChildren,
 } from 'react';
 
-import { authedSupabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/use-auth';
+import { identityFromUser } from '@/lib/auth';
 import { toError } from '@/lib/errors';
 import { clearPendingRole } from '@/lib/pending-role';
+import { supabase } from '@/lib/supabase';
 import type { Profile, UserRole } from '@/lib/types';
 
 type ProfileValue = {
@@ -35,7 +36,7 @@ const ProfileContext = createContext<ProfileValue | null>(null);
  * so saving a role updates everyone at once — no per-screen refetch races.
  */
 export function ProfileProvider({ children }: PropsWithChildren) {
-  const { user, isLoaded, isSignedIn } = useUser();
+  const { user, isLoaded, isSignedIn } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,10 +52,10 @@ export function ProfileProvider({ children }: PropsWithChildren) {
       return;
     }
     setLoading(true);
-    const { data, error: queryError } = await authedSupabase
+    const { data, error: queryError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('clerk_user_id', userId)
+      .eq('auth_user_id', userId)
       .maybeSingle();
     if (queryError) {
       console.error('[useProfile] load failed:', queryError);
@@ -75,22 +76,23 @@ export function ProfileProvider({ children }: PropsWithChildren) {
       if (!user || !userId) {
         throw new Error('Still signing you in — please try again in a moment.');
       }
+      const identity = identityFromUser(user);
       const payload = {
-        clerk_user_id: userId,
+        auth_user_id: userId,
         role,
         display_name:
           displayName?.trim() ||
-          user.fullName ||
-          user.firstName ||
-          user.primaryEmailAddress?.emailAddress ||
+          identity.full ||
+          identity.first ||
+          identity.email ||
           'FarmConnect member',
-        avatar_url: user.imageUrl ?? null,
+        first_name: identity.first,
+        last_name: identity.last,
+        avatar_url: identity.avatar,
       };
-      // upsert so a retry (or a bounce back to role-select) can't fail on a
-      // duplicate clerk_user_id.
-      const { data, error: saveError } = await authedSupabase
+      const { data, error: saveError } = await supabase
         .from('profiles')
-        .upsert(payload, { onConflict: 'clerk_user_id' })
+        .upsert(payload, { onConflict: 'auth_user_id' })
         .select()
         .single();
       if (saveError) {
@@ -122,10 +124,10 @@ export function ProfileProvider({ children }: PropsWithChildren) {
           `${first} ${last}`.trim() || profile?.display_name || 'FarmConnect member';
       }
 
-      const { data, error: saveError } = await authedSupabase
+      const { data, error: saveError } = await supabase
         .from('profiles')
         .update(payload)
-        .eq('clerk_user_id', userId)
+        .eq('auth_user_id', userId)
         .select()
         .single();
       if (saveError) {

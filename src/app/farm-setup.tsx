@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/expo";
+import { useAuth } from "@/hooks/use-auth";
 import * as Location from "expo-location";
 import { Redirect, useRouter } from "expo-router";
 import { SymbolView } from "expo-symbols";

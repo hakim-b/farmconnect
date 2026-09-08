@@ -1,11 +1,11 @@
-import { authedSupabase, publicSupabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
-/** Stable, app-wide client that carries the current Clerk session token. */
+/** Stable, app-wide client. Carries the current Supabase Auth session when signed in. */
 export function useSupabase() {
-  return authedSupabase;
+  return supabase;
 }
 
-/** Stable, app-wide anonymous client. */
+/** Same client as `useSupabase`. Public reads work signed-out (anon) or signed-in. */
 export function usePublicSupabase() {
-  return publicSupabase;
+  return supabase;
 }

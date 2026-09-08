@@ -1,4 +1,3 @@
-import { useAuth, useUser } from '@clerk/expo';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button } from 'heroui-native';
@@ -6,6 +5,8 @@ import { Button } from 'heroui-native';
 import { Wordmark } from '@/components/logo';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
+import { identityFromUser } from '@/lib/auth';
 import type { Profile } from '@/lib/types';
 
 export function AccountHeader({
@@ -20,9 +21,8 @@ export function AccountHeader({
   /** Replaces the default "Sign out" button (e.g. the customer profile button). */
   right?: ReactNode;
 }) {
-  const { user } = useUser();
-  const { signOut } = useAuth();
-  const name = profile?.display_name ?? user?.firstName ?? 'there';
+  const { user, signOut } = useAuth();
+  const name = profile?.display_name ?? identityFromUser(user).first ?? 'there';
 
   return (
     <View style={styles.wrap}>

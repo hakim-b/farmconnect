@@ -1,8 +1,8 @@
-import { useAuth } from '@clerk/expo';
 import { Redirect } from 'expo-router';
 
 import { LoadingScreen } from '@/components/screen';
 import VendorTabs from '@/components/vendor-tabs';
+import { useAuth } from '@/hooks/use-auth';
 import { useVendorFarm } from '@/hooks/use-vendor-farm';
 
 export default function VendorLayout() {
