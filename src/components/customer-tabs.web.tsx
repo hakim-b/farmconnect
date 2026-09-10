@@ -1,6 +1,7 @@
 import { TabList, Tabs, TabSlot, TabTrigger } from "expo-router/ui";
 import { StyleSheet } from "react-native";
 
+import { CustomerProfileButton } from "@/components/customer-profile-drawer";
 import { TabButton } from "@/components/tab-button.web";
 import { ThemedText } from "@/components/themed-text";
 import { Colors, MaxContentWidth, Spacing } from "@/constants/theme";
@@ -28,6 +29,7 @@ export default function CustomerTabs() {
         <TabTrigger name="eid" href="/(customer)/eid" asChild>
           <TabButton>Eid</TabButton>
         </TabTrigger>
+        <CustomerProfileButton />
       </TabList>
     </Tabs>
   );
@@ -37,6 +39,7 @@ const styles = StyleSheet.create({
   tabList: {
     position: "absolute",
     width: "100%",
+    alignSelf: "center",
     padding: Spacing.three,
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.four,

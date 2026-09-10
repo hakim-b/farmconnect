@@ -1,17 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 
-import { AccountHeader } from '@/components/account-header';
-import { AddToCartSheet } from '@/components/add-to-cart-sheet';
-import { CustomerProfileButton } from '@/components/customer-profile-drawer';
-import { FarmCard } from '@/components/farm-card';
-import { ProductCard } from '@/components/product-card';
-import { EmptyState, LoadingScreen, Screen } from '@/components/screen';
-import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
-import { useProfile } from '@/hooks/use-profile';
-import { usePublicSupabase } from '@/hooks/use-supabase';
-import type { Farm, Product } from '@/lib/types';
+import { AccountHeader } from "@/components/account-header";
+import { AddToCartSheet } from "@/components/add-to-cart-sheet";
+import { FarmCard } from "@/components/farm-card";
+import { ProductCard } from "@/components/product-card";
+import { EmptyState, LoadingScreen, Screen } from "@/components/screen";
+import { ThemedText } from "@/components/themed-text";
+import { Spacing } from "@/constants/theme";
+import { useProfile } from "@/hooks/use-profile";
+import { usePublicSupabase } from "@/hooks/use-supabase";
+import type { Farm, Product } from "@/lib/types";
 
 export default function CustomerHomeScreen() {
   const { profile } = useProfile();
@@ -24,23 +23,27 @@ export default function CustomerHomeScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: farmRows, error: farmError }, { data: saleRows, error: saleError }] =
-      await Promise.all([
-        supabase
-          .from('farms')
-          .select('*, farm_certifications(*)')
-          .eq('is_published', true)
-          .order('average_rating', { ascending: false }),
-        supabase
-          .from('products')
-          .select('*, farms(id, name, slug, thumbnail_url)')
-          .eq('is_on_sale', true)
-          .eq('is_available', true)
-          .order('name'),
-      ]);
+    const [
+      { data: farmRows, error: farmError },
+      { data: saleRows, error: saleError },
+    ] = await Promise.all([
+      supabase
+        .from("farms")
+        .select("*, farm_certifications(*)")
+        .eq("is_published", true)
+        .order("average_rating", { ascending: false }),
+      supabase
+        .from("products")
+        .select("*, farms(id, name, slug, thumbnail_url)")
+        .eq("is_on_sale", true)
+        .eq("is_available", true)
+        .order("name"),
+    ]);
 
     if (farmError || saleError) {
-      setError(farmError?.message ?? saleError?.message ?? 'Could not load farms.');
+      setError(
+        farmError?.message ?? saleError?.message ?? "Could not load farms.",
+      );
     } else {
       setError(null);
       setFarms((farmRows as Farm[]) ?? []);
@@ -57,11 +60,7 @@ export default function CustomerHomeScreen() {
 
   return (
     <Screen>
-      <AccountHeader
-        title="What's nearby"
-        profile={profile}
-        right={<CustomerProfileButton />}
-      />
+      <AccountHeader title="What's nearby" profile={profile} />
 
       {error ? (
         <ThemedText type="small" style={styles.error}>
@@ -72,11 +71,23 @@ export default function CustomerHomeScreen() {
       <View style={styles.section}>
         <ThemedText type="smallBold">What's new</ThemedText>
         {sales.length === 0 ? (
-          <EmptyState title="No sales yet" body="Nearby farms have not posted sale items." />
+          <EmptyState
+            title="No sales yet"
+            body="Nearby farms have not posted sale items."
+          />
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carousel}
+          >
             {sales.map((product) => (
-              <ProductCard key={product.id} product={product} compact onPress={setSheetProduct} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                compact
+                onPress={setSheetProduct}
+              />
             ))}
           </ScrollView>
         )}
@@ -85,14 +96,17 @@ export default function CustomerHomeScreen() {
       <View style={styles.section}>
         <ThemedText type="smallBold">Local farms</ThemedText>
         {farms.length === 0 ? (
-          <EmptyState title="No farms yet" body="Published farms will appear here." />
+          <EmptyState
+            title="No farms yet"
+            body="Published farms will appear here."
+          />
         ) : (
           farms.map((farm) => <FarmCard key={farm.id} farm={farm} />)
         )}
       </View>
 
       <AddToCartSheet
-        key={sheetProduct?.id ?? 'none'}
+        key={sheetProduct?.id ?? "none"}
         product={sheetProduct}
         onClose={() => setSheetProduct(null)}
       />
@@ -109,6 +123,6 @@ const styles = StyleSheet.create({
     paddingRight: Spacing.two,
   },
   error: {
-    color: '#B42318',
+    color: "#B42318",
   },
 });

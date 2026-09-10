@@ -1,13 +1,13 @@
-import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Button } from 'heroui-native';
+import { Button } from "heroui-native";
+import type { ReactNode } from "react";
+import { Platform, StyleSheet, View } from "react-native";
 
-import { Wordmark } from '@/components/logo';
-import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
-import { useAuth } from '@/hooks/use-auth';
-import { identityFromUser } from '@/lib/auth';
-import type { Profile } from '@/lib/types';
+import { Wordmark } from "@/components/logo";
+import { ThemedText } from "@/components/themed-text";
+import { Spacing } from "@/constants/theme";
+import { useAuth } from "@/hooks/use-auth";
+import { identityFromUser } from "@/lib/auth";
+import type { Profile } from "@/lib/types";
 
 export function AccountHeader({
   title,
@@ -22,17 +22,18 @@ export function AccountHeader({
   right?: ReactNode;
 }) {
   const { user, signOut } = useAuth();
-  const name = profile?.display_name ?? identityFromUser(user).first ?? 'there';
+  const name = profile?.display_name ?? identityFromUser(user).first ?? "there";
 
   return (
     <View style={styles.wrap}>
       <View style={styles.brandRow}>
         <Wordmark markSize={22} />
-        {right ?? (
-          <Button size="sm" variant="secondary" onPress={() => signOut()}>
-            Sign out
-          </Button>
-        )}
+        {right ??
+          (Platform.OS !== "web" ? (
+            <Button size="sm" variant="secondary" onPress={() => signOut()}>
+              Sign out
+            </Button>
+          ) : null)}
       </View>
       <View style={styles.copy}>
         <ThemedText type="subtitle">{title}</ThemedText>
@@ -49,9 +50,9 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: Spacing.two,
   },
   copy: {
